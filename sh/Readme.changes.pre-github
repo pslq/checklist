@@ -1,0 +1,73 @@
+# Changelog:
+# 1.5    - 12/16/2015
+#        - AIX  : Improved PowerHA Data collection
+#        - ALL  : more code cleanup
+#        - ALL  : collect lsof data
+#        - ALL  : collect rpm data
+# 1.6    - 04/18/2016
+#        - ALL  : Improvement on hex values reading ( Mark Rey blog input ) and vmstat
+#        - ALL  : info about KBIOD / uprintfd
+# 1.7    - 06/09/2016
+#        - ALL  : Basic Veritas Data collection
+#        - ALL  : Better AIX 6.1 integration
+#        - ALL  : Improved env / vmstat / tprof analysis 
+#        - ALL  : Collect wlmcntrl
+#        - ALL  : More hints at the source comments 
+#        - VIOS : Improved NPIV and SEA analysis
+#        - ALL  : Better pmtu analysis
+# 1.8    - 06/10/2016
+#        - ALL  : Better VXSF analysis
+#        - ALL  : Better entstat parsing
+#        - ALL  : Cleanned rsrc resource dump
+#        - VIOS : Improved entstat / npiv parsing and analysis
+# 1.9    - 06/13/2016
+#        - ALL  : Better trace collection
+#        - ALL  : netpmon collection ( when NFS share is detected )
+#        - ALL  : emstat / alstat / filemon collection
+#        - AIX  : More NPIV client analysis
+#        - ALL  : cronlog analysis
+#        - AIX  : better uprintfd analysis
+# 2.0    - 06/21/2016
+#        - ALL  : Code cleanup & organization
+#        - ALL  : Split process handling on a different function
+#        - ALL  : Better analysis of vmstat / lparstat session ( split into a different function )
+#        - ALL  : Better wait code
+#        - ALL  : Netstat -an Analysis
+#        - ALL  : Get topasout data
+#        - ALL  : Cleanup exit function
+#        - ALL  : Better iostat parsing 
+#        - ALL  : Segment GPFS code into another function
+# 2.1    - 06/28/2016
+#        - ALL  : Code cleanup & better message identification
+#        - VIOS : Shared Storage pool stuff
+# 2.2    - 07/06/2016
+#        - ALL  : bugfixes
+#        - ALL  : Java advisories
+#        - AIX  : poll_uplink checks
+# 2.3    - 07/29/2016
+#        - ALL  : bugfix on no parsing
+#        - AIX  : Added an option to skip powerha collection
+#        - ALL  : better handle defunct disk parsing
+#        - ALL  : better trace handling ( more details )
+#        - ALL  : lsfilt collection
+#        - ALL  : Collect audit data
+#        - ALL  : Validate free space before start
+#        - ALL  : Running OS check
+# 2.4    - 08/17/2016
+#        - ALL  : Workaround for hanged svmon,procstack,procfiles and print commands and pts checks before kill
+# 2.5    - 08/18/2016
+#        - ALL  : Compress syslog files
+#        - ALL  : Calculate ideal memory cpu and core size for the LPAR 
+#        - ALL  : Bug fixes
+# 2.6    - 09/16/2016
+#        - ALL  : Bug fixes
+# 2.7    - 12/02/2016
+#        - ALL  : Bug fixes
+#        - AIX  : PowerHA collection improvements
+#        - 07/05/2017
+# 2.8    - ALL  : Migrated most analysis to consolidator
+#        - VIOS : Better collection for SSP
+#        - ALL  : Fixed powermt command output
+#        - 05/05/2021
+# 3.0    - ALL  : Removed hpmstat from default execution plan, along with other miner fixes
+#        - ALL  : push to github
