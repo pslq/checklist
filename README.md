@@ -9,6 +9,7 @@ Under the "sh" directory, follow the standard Korn shell scripts to be executed 
  - vmstat_i.sh -> Virtual Memory interrupt related statistics
  - vmstat_s.sh  -> Virtual Memory system wide statistics
  - lspath.sh -> Disk multipath health ( Rely on AIX MPIO )
+ - errpt_count.sh -> Count amount of elements out of errpt
 
 
 
