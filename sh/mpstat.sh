@@ -3,14 +3,37 @@
 # This script is distributed ASIS, no garantee & support will be provided by it
 # and is licensed at GPLV3
 #
+
 #####################################################################
 # Report pctUtil based on ent% cores or online cpus ?
 rep_mode="ec" # <ec|vcpu> # report based only on ec%
-# if set to "ec", will use only the ec% field to report data ( can go beyond 100% )
-# if set to "vcpu" will use the amountof cpus are assigned to the lpar + ec% to caculate total amount that the lpar can get to itself
-##
+# if set to "ec", will use only the ec% field to report data 
+# if set to "vcpu" will use the amountof cpus are assigned to the
+#   lpar + ec% to caculate total amount that the lpar can get to itself
+
+#####################################################################
 count=2    # amount of mpstat samples to read
 interval=1 # interval between the samples
+
+#####################################################################
+# Run Queue
+# By definition ( at least what I understood ), when reading RQ
+# If 0, means that a specific CPU is totaly idle
+# If 1, means that is fully utilized
+# If bigger than 1, means that some processes are being queued which,
+#   indicates that the kernel is interchanging processes into this
+#   specific CPU, which indicates a bottleneck 
+#   On the old times, anything between 0 and ~10 for a specific CPU
+#   would likely be ok, and above that the kernel would be swaping
+#   proccesses to intensively the the system would look like hanged
+#   Taking that history into consideration, there are two ways that I
+#   can report RQ, the absolute value ( plain RQ output from mpstat )
+#   and relative to the amount of proccess into the queue across the
+#   CPUS, and under which RQ value the system will be considered 100%
+#   loaded
+RQ_REPORT_MODE="relative" # absolute or relative
+RQ_RELATIVE_100PCT="10"   # which rq value per cpu represent 100%
+
 #####################################################################
 # Global vars
 export LANG="C"
@@ -18,7 +41,9 @@ export LC_NUMERIC="POSIX"
 
 
 mpstat -a ${interval} ${count} |
-  awk -v rep_mode="${rep_mode}" -v lpar_data="$(lparstat -i |  awk \
+  awk -v RQ_REPORT_MODE=${RQ_REPORT_MODE} \
+      -v RQ_RELATIVE_100PCT=${RQ_RELATIVE_100PCT} \
+      -v rep_mode="${rep_mode}" -v lpar_data="$(lparstat -i |  awk \
   '{
     if ( $1 == "Type" ) {
       if ( $3 ~ /Shared/ )
@@ -54,7 +79,8 @@ mpstat -a ${interval} ${count} |
         ics  = ics + $11; cs   = cs  + $10; rq   = rq + $13;
         ilcs = ilcs + $29; vlcs = vlcs + $30;
       }
-    }
+  } else if (( $1 ~ /^[0-9]+$/ )&&( count < 1 ))
+      thread_count=thread_count+1;
   } END {
     pctUser=user/count; pctSystem=sys/count; pctIowait=wait/count;
     pctIdle=idle/count; pctCore=pc/count;    pctUtil=ec/count;
@@ -62,6 +88,8 @@ mpstat -a ${interval} ${count} |
     vlcs = vlcs/count;  RunQueue=rq/count;   pc=pc/count;
     InvoluntaryContextSwitch=ics/cs;
     InvoluntaryCoreContextSwitch=ilcs/vlcs;
+    if ( RQ_REPORT_MODE == "relative" )
+      RunQueue = (RunQueue/thread_count)/RQ_RELATIVE_100PCT;
     printf("CPU=all pctUser=%f pctSystem=%f pctIowait=%f pctIdle=%f pc=%f pctUtil=%f InvoluntaryContextSwitch=%f InvoluntaryCoreContextSwitch=%f RunQueue=%f\n",
-                    pctUser,   pctSystem,   pctIowait,   pctIdle,   pc,   pctUtil,   InvoluntaryContextSwitch,   InvoluntaryCoreContextSwitch,   rq);
+                    pctUser,   pctSystem,   pctIowait,   pctIdle,   pc,   pctUtil,   InvoluntaryContextSwitch,   InvoluntaryCoreContextSwitch,   RunQueue);
   }'
