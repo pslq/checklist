@@ -25,23 +25,17 @@ lsdev | awk '{
 for ADPT in $(lsdev | awk '{ if ( $1 ~ /^en[0-9]/ ) { if ( $2 == "Available" ) print $1 }}')
 do
   entstat -d ${ADPT} | awk -v en="${ADPT}" '{
-    if (( $1 == "Packets:" )&&( $3 == "Packets:" ))
-    {
+    if (( $1 == "Packets:" )&&( $3 == "Packets:" )) {
       send_pkg = $2;   recv_pkg = $4;
-    } else if (( $1 == "Bytes:" )&&( $3 == "Bytes:" ))
-    {
-      send_bytes = $2; recv_bytes = $2;
-    } else if ( $0 ~ /^Transmit Errors:/ )
-    {
+    } else if (( $1 == "Bytes:" )&&( $3 == "Bytes:" )) {
+      send_bytes = $2; recv_bytes = $4;
+    } else if ( $0 ~ /^Transmit Errors:/ ) {
       send_err   = $3; recv_err = $6;
-    } else if ( $0 ~ /^No mbuf Errors:/ )
-    {
+    } else if ( $0 ~ /^No mbuf Errors:/ ) {
       mbuf_err   = $4;
-    } else if ( $0 ~ /^Hypervisor Send Failures:/ )
-    {
+    } else if ( $0 ~ /^Hypervisor Send Failures:/ ) {
       send_hyp_err = $4;
-    } else if ( $0 ~ /^Hypervisor Receive Failures:/ )
-    {
+    } else if ( $0 ~ /^Hypervisor Receive Failures:/ ) {
       recv_hype_err = $4;
     }
   } END { 
