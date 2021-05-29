@@ -11,6 +11,8 @@ Under the "sh" directory, follow the standard Korn shell scripts to be executed 
  - lspath.sh -> Disk multipath health ( Rely on AIX MPIO )
  - errpt_count.sh -> Count amount of elements out of errpt
  - seastat.sh --> Get Network Statistics from VIOS SEA Adapters
+ - mount.sh --> Check filesystem mount parameters for unsafe settings
+
 
 
 
