@@ -4,7 +4,7 @@ Under the "sh" directory, follow the standard Korn shell scripts to be executed 
  - checklist-aix.sh  -> do a data capture of the server
  - fcstat.sh -> Collect Fibre interface statistics
  - netstat.sh  -> Collect Ethernet interface statistics 
- - mpstat.sh -> Collect CPU/CORE statistics
+ - cpu.sh -> Collect CPU/CORE statistics
  - powerha_check.sh  -> Do a PowerHA Automate health check
  - vmstat_i.sh -> Virtual Memory interrupt related statistics
  - vmstat_s.sh  -> Virtual Memory system wide statistics
