@@ -34,62 +34,94 @@ interval=1 # interval between the samples
 RQ_REPORT_MODE="relative" # absolute or relative
 RQ_RELATIVE_100PCT="10"   # which rq value per cpu represent 100%
 
+# Collect shared proc pool available cores
+COLL_LPAR_APP="true"
+
 #####################################################################
 # Global vars
 export LANG="C"
 export LC_NUMERIC="POSIX"
-
-
-mpstat -a ${interval} ${count} |
-  awk -v RQ_REPORT_MODE=${RQ_REPORT_MODE} \
-      -v RQ_RELATIVE_100PCT=${RQ_RELATIVE_100PCT} \
-      -v rep_mode="${rep_mode}" -v lpar_data="$(lparstat -i |  awk \
-  '{
-    if ( $1 == "Type" ) {
-      if ( $3 ~ /Shared/ )
-        mode = "shr";
-      else
-        mode = "ded";
-    } else if ( $0 ~ /Online Virtual CPUs/ ) {
-      ent_cpu = $5;
-    } else if (( $0 ~ /Entitled Capacity/ )&&( $0 !~ /Pool/ )) {
-      ent_core = $4;
-    }
-  } END {
-    print(mode,ent_cpu,ent_core);
-  }')" '{
-    split(lpar_data,lpd," ");
-    if ( $1 == "ALL" )
-    {
-      count=count+1;
-      if ( lpd[1] == "shr" )
-      {
-        user = user + $24; sys  = sys + $25; wait = wait + $26;
-        idle = idle + $27; pc   = pc + $28;
-        ics  = ics + $11; cs   = cs  + $10; rq   = rq + $13;
-        ilcs = ilcs + $30; vlcs = vlcs + $31;
-        if ( rep_mode == "ec" )
-          ec   = ec + $29;
-        else {
-          ec = ec + ( (lpd[3]*$29)/lpd[2]);
+export lpar_data="$(lparstat -i |  awk \
+      '{
+        if ( $1 == "Type" ) {
+          if ( $3 ~ /Shared/ )
+            mode = "shr";
+          else
+            mode = "ded";
+        } else if ( $0 ~ /Online Virtual CPUs/ ) {
+          ent_cpu = $5;
+        } else if (( $0 ~ /Entitled Capacity/ )&&( $0 !~ /Pool/ )) {
+          ent_core = $4;
         }
-      } else if ( lpd[1] == "ded" ) {
-        user = user + $24; sys  = sys + $25; wait = wait + $26;
-        idle = idle + $27; pc   = pc + $28; ec   =  ec + ( (pc/($24+$25))*100 );
-        ics  = ics + $11; cs   = cs  + $10; rq   = rq + $13;
-        ilcs = ilcs + $29; vlcs = vlcs + $30;
-      }
-  } else if (( $1 ~ /^[0-9]+$/ )&&( count < 1 ))
-      thread_count=thread_count+1;
-  } END {
-    pctUser=user/count; pctSystem=sys/count; pctIowait=wait/count;
-    pctIdle=idle/count; pctCore=pc/count;    pctUtil=ec/count;
-    ics = ics/count;    cs = cs/count;       ilcs = ilcs/count;
-    vlcs = vlcs/count;  RunQueue=rq/count;   pc=pc/count;
-    InvoluntaryContextSwitch=ics/cs;
-    InvoluntaryCoreContextSwitch=ilcs/vlcs;
-    if ( RQ_REPORT_MODE == "relative" )
-      RunQueue = (RunQueue/thread_count)/RQ_RELATIVE_100PCT;
-    printf("CPU=all pctUser=%f pctSystem=%f pctIowait=%f pctIdle=%f pc=%f pctUtil=%f InvoluntaryContextSwitch=%f InvoluntaryCoreContextSwitch=%f RunQueue=%f\n",
-                    pctUser,   pctSystem,   pctIowait,   pctIdle,   pc,   pctUtil,   InvoluntaryContextSwitch,   InvoluntaryCoreContextSwitch,   RunQueue);
-  }'
+      } END {
+        print(mode,ent_cpu,ent_core);
+      }')"
+
+(
+  ( 
+    if [ "${COLL_LPAR_APP}" = "true" ]; then
+      lparstat ${interval} ${count} | 
+        awk \
+          -v lpar_data="${lpar_data}" \
+          '{
+             if (( $1 == "%user" )&&( $8 == "app" )) {
+               R=1;
+             } else if ( ( $1 ~ /^[0-9]/ )&&( R == 1 )) { 
+               count = count+1 ;
+               cpu = $8+cpu;
+             } 
+           } END {
+             split(lpar_data,lpd," ");
+             if ( lpd[1] == "shr" )
+               printf("APP=%f ", cpu/count); 
+           }'
+    else
+      echo ""
+    fi
+  ) &
+  P1=${!}
+  (
+    mpstat -a ${interval} ${count} |
+      awk -v RQ_REPORT_MODE=${RQ_REPORT_MODE} \
+          -v RQ_RELATIVE_100PCT=${RQ_RELATIVE_100PCT} \
+          -v rep_mode="${rep_mode}" -v lpar_data="${lpar_data}" \
+     '{
+        split(lpar_data,lpd," ");
+        if ( $1 == "ALL" )
+        {
+          count=count+1;
+          if ( lpd[1] == "shr" )
+          {
+            user = user + $24; sys  = sys + $25; wait = wait + $26;
+            idle = idle + $27; pc   = pc + $28;
+            ics  = ics + $11; cs   = cs  + $10; rq   = rq + $13;
+            ilcs = ilcs + $30; vlcs = vlcs + $31;
+            if ( rep_mode == "ec" )
+              ec   = ec + $29;
+            else {
+              ec = ec + ( (lpd[3]*$29)/lpd[2]);
+            }
+          } else if ( lpd[1] == "ded" ) {
+            user = user + $24; sys  = sys + $25; wait = wait + $26;
+            idle = idle + $27; pc   = pc + $28; ec   =  ec + ($28/($24+$25)) ;
+            ics  = ics + $11; cs   = cs  + $10; rq   = rq + $13;
+            ilcs = ilcs + $29; vlcs = vlcs + $30;
+          }
+      } else if (( $1 ~ /^[0-9]+$/ )&&( count < 1 ))
+          thread_count=thread_count+1;
+      } END {
+        pctUser=user/count; pctSystem=sys/count; pctIowait=wait/count;
+        pctIdle=idle/count; pctCore=pc/count;    pctUtil=ec/count;
+        ics = ics/count;    cs = cs/count;       ilcs = ilcs/count;
+        vlcs = vlcs/count;  RunQueue=rq/count;   pc=pc/count;
+        InvoluntaryContextSwitch=ics/cs;
+        InvoluntaryCoreContextSwitch=ilcs/vlcs;
+        if ( RQ_REPORT_MODE == "relative" )
+          RunQueue = (RunQueue/thread_count)/RQ_RELATIVE_100PCT;
+        printf("CPU=all pctUser=%f pctSystem=%f pctIowait=%f pctIdle=%f pc=%f pctUtil=%f InvoluntaryContextSwitch=%f InvoluntaryCoreContextSwitch=%f RunQueue=%f\n",
+                        pctUser,   pctSystem,   pctIowait,   pctIdle,   pc,   pctUtil,   InvoluntaryContextSwitch,   InvoluntaryCoreContextSwitch,   RunQueue);
+      }'
+  ) &
+  P2=${!}
+  wait ${P1} ${P2}
+) | xargs
