@@ -108,6 +108,7 @@ export lpar_data="$(lparstat -i |  awk \
         if ( $1 == "ALL" )
         {
           count=count+1;
+          user_total = $24+$25+$26;
           if ( lpd[1] == "shr" )
           {
             user = user + $24; sys  = sys + $25; wait = wait + $26;
@@ -117,7 +118,8 @@ export lpar_data="$(lparstat -i |  awk \
             if ( rep_mode == "ec" ) {
               ec   = ec + $29;
             } else {
-              ec = ec + ( (lpd[3]*$29)/lpd[2]);
+              T = (user_total/((lpd[3]*$29)/lpd[2]))*100;
+              ec = ec + T;
             }
           } else if ( lpd[1] == "ded" ) {
             user = user + $24; sys  = sys + $25; wait = wait + $26;
