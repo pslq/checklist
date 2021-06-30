@@ -105,6 +105,9 @@ export lpar_data="$(lparstat -i |  awk \
           -v rep_mode="${rep_mode}" -v lpar_data="${lpar_data}" \
      '{
         split(lpar_data,lpd," ");
+        mode = lpd[1];
+        ent_cpu = lpd[2];
+        ent_core = lpd[3];
         if ( $1 == "ALL" )
         {
           count=count+1;
@@ -118,8 +121,9 @@ export lpar_data="$(lparstat -i |  awk \
             if ( rep_mode == "ec" ) {
               ec   = ec + $29;
             } else {
-              T = (user_total/((lpd[3]*$29)/lpd[2]))*100;
-              ec = ec + T;
+              core_use = ent_core*$29/100;
+              pct_possible_core = core_use/ent_cpu*100
+              ec = ec + pct_possible_core;
             }
           } else if ( lpd[1] == "ded" ) {
             user = user + $24; sys  = sys + $25; wait = wait + $26;
@@ -127,7 +131,7 @@ export lpar_data="$(lparstat -i |  awk \
             ics  = ics + $11; cs   = cs  + $10; rq   = rq + $13;
             ilcs = ilcs + $29; vlcs = vlcs + $30;
             if ( $28/lpd[3] > 0.8 ) {
-              ec   =  ec + (lpd[3]/($24+$25+$26)*100) ;
+              ec   =  ec + (lpd[3]/(user_total)*100) ;
             } else {
               ec = ec + ( $28/lpd[3]*100 );
             }
@@ -160,4 +164,13 @@ export lpar_data="$(lparstat -i |  awk \
   ) &
   P2=${!}
   wait ${P1} ${P2}
-) 
+)  | awk '
+{
+  if ( $0 ~ /WARN/ )
+    WARN = 1;
+  print($0);
+} END {
+  if ( WARN != 1 )
+    print("WARN=\"OK\"");
+}
+'
