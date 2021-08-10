@@ -102,13 +102,15 @@ adapter_view()
 {
   for ADPT in $(lsdev | awk '{ if ( $1 ~ /^ent[0-9]/ ) { if (( $2 == "Available" )&&( $0 ~ /Shared Ethernet Adapter/ )) print $1 }}')
   do
+    echo ${ADPT}
     entstat -d ${ADPT} | awk '
     {
       if ( $0 ~ /ETHERNET STATISTICS/ ) {
+        sub(/\(/, "", $3);
+        sub(/)/, "", $3);
         adpt_count = adpt_count+1;
-        sub(/\(/, "", $3); sub(/)/, "", $3);
         adpt_name = $3;
-        adpt[adpt_count] = adpt_name;
+        adpt[adpt_count] = $3;
       } else if (( $1 == "Packets:" )&&( $3 == "Packets:" )) {
         pkg_send[adpt_name] = $2;   pkg_recv[adpt_name] = $4;
       } else if (( $1 == "Bytes:" )&& ( $3 == "Bytes:" )) {
@@ -123,9 +125,16 @@ adapter_view()
         phy_link_stat[adpt_name] = $5;
       } else if ( $0 ~ /Logical Port Link Status/ ) {
         log_link_stat[adpt_name] = $5;
-      } else if ( $0 ~ /VLAN Tag IDs/ ) {
+      } else if ( $0 ~ /VLAN Tag IDs|Port VLAN ID/ ) {
         spl = split($0, st, ":" );
-        vlan[adpt_name] = st[2];
+        gsub(/ /, "", st[2]);
+        if ( st[2] != "None" )
+        {
+          if ( vlan[adpt_name] != "" )
+            vlan[adpt_name] = vlan[adpt_name]" "st[2];
+          else
+            vlan[adpt_name] = st[2];
+        }
       }
     } END {
       prev = "";

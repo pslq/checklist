@@ -6,10 +6,11 @@
 
 #####################################################################
 # Report pctUtil based on ent% cores or online cpus ?
-rep_mode="vcpu" # <ec|vcpu> # report based only on ec%
+rep_mode="kernel" # <ec|vcpu|kernel> # report based only on ec%
 # if set to "ec", will use only the ec% field to report data 
-# if set to "vcpu" will use the amountof cpus are assigned to the
+# if set to "vcpu" will use the amount of cpus are assigned to the
 #   lpar + ec% to caculate total amount that the lpar can get to itself
+# if set to "kernel" will report the consolidated amount of user+sys+wait
 
 #####################################################################
 count=2    # amount of mpstat samples to read
@@ -120,17 +121,22 @@ export lpar_data="$(lparstat -i |  awk \
             ilcs = ilcs + $30; vlcs = vlcs + $31;
             if ( rep_mode == "ec" ) {
               ec   = ec + $29;
-            } else {
+            } else if ( rep_mode == "vcpu" ) {
               core_use = ent_core*$29/100;
               pct_possible_core = core_use/ent_cpu*100
               ec = ec + pct_possible_core;
+            } else if ( rep_mode == "kernel" ) {
+              ec = ec + user_total;
             }
           } else if ( lpd[1] == "ded" ) {
             user = user + $24; sys  = sys + $25; wait = wait + $26;
             idle = idle + $27; pc   = pc + $28; 
             ics  = ics + $11; cs   = cs  + $10; rq   = rq + $13;
             ilcs = ilcs + $29; vlcs = vlcs + $30;
-            if ( $28/lpd[3] > 0.8 ) {
+            if ( rep_mode == "kernel" )
+            {
+              ec = ec + user_total;
+            } else if ( $28/lpd[3] > 0.8 ) {
               ec   =  ec + (lpd[3]/(user_total)*100) ;
             } else {
               ec = ec + ( $28/lpd[3]*100 );
