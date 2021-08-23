@@ -102,7 +102,6 @@ adapter_view()
 {
   for ADPT in $(lsdev | awk '{ if ( $1 ~ /^ent[0-9]/ ) { if (( $2 == "Available" )&&( $0 ~ /Shared Ethernet Adapter/ )) print $1 }}')
   do
-    echo ${ADPT}
     entstat -d ${ADPT} | awk '
     {
       if ( $0 ~ /ETHERNET STATISTICS/ ) {
