@@ -1,0 +1,47 @@
+[INFLUXDB]
+url = <influxdb_url>
+token = <influxdb_token>
+org = <influxdb_org>
+bucket = <influxdb_bucket>
+
+[ANSIBLE]
+host_target = <host target when running on ansible mode>
+
+[MODE]
+# Use ansible to collect data from remote servers and push into influxdb, or
+#  run as local collector to push data about local server into influxdb
+# possble modes: local, ansible
+mode = local
+
+[LOOP]
+# Interval between the collections
+interval = 60
+
+[LOG]
+# Valid entries: INFO / DEBUG
+log_level = DEBUG
+# Log file or empty, if empty it will go to syslog
+log_file =
+# Log commands executed at the server into syslog or logfile
+log_commands = True
+
+[CPU]
+# Diretives to use when collecting cpu related stats ( lparstat and mpstat )
+# Samples used to analyze data
+samples            = 2
+# Interval between samples
+interval           = 1
+# which rq value per cpu represent 100%, -1 to disable the warning
+rq_relative_100pct = 10
+# when a warning will be issued for high utilization, -1 to disable the warning
+max_usage_warn     = 90
+# when a warning will be issued for low utilization, -1 to disable the warning
+min_usage_warn     = 30
+# when a warning will be issued for low core availability on pool, -1 to disable the warning
+min_core_pool_warn = 2
+# If warnings related to ics/ilcs/srad will be issued
+other_warnings     = True
+# Ratio to issue a warning of ics against cs
+involuntarycontextswitch_ratio     = 30 
+# Ratio to issue a warning of ilcs against vlcs ( only when running on shared core mode )
+involuntarycorecontextswitch_ratio = 10
