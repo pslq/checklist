@@ -118,18 +118,16 @@ def line_cleanup(iterable, split=False, delimiter='', cleanup = True, remove_end
     Iterable
   '''
   ret = iterable
-  def cleanu(st) :
-    if remove_endln :
-      return(st.replace("\t", ' ').replace('  ', ' ').strip(' ').replace('\n', ''))
-    else :
-      return(st.replace("\t", ' ').replace('  ', ' ').strip(' '))
 
   for ln in iterable :
     if isinstance(ln, bytes) :
       ln = ln.decode()
     if ln and cleanup :
       while "\t" in ln or '  ' in ln :
-        ln = cleanu(ln)
+        ln = ln.replace("\t", ' ').replace('  ', ' ').strip('')
+      if remove_endln :
+        lp = ln.split('\n')
+        ln = ''.join(lp)
     if split :
       yield(ln.split(delimiter))
     else :
@@ -137,15 +135,15 @@ def line_cleanup(iterable, split=False, delimiter='', cleanup = True, remove_end
 
 ########################################################################################################################
 # Helper to execute shell commands
-def get_command_output(command=None, rundir=None, pq_logger = None, shell=False, timeout=30, ansible_module = None, \
+def get_command_output(command=None, cwd=None, pq_logger = None, shell=False, timeout=30, ansible_module = None, \
                  default_env = { 'LC_ALL' : 'C', 'PATH' : '/sbin:/etc:/bin:/usr/bin:/usr/sbin:/usr/ios/cli', 'ODMDIR' : '/etc/objrepos' }) -> dict :
   '''
   This helper works around subprocess module to execute shell commands within python3
   It encapsulate the command output on a dict object, and will decode and split the command output into a list
 
   Parameters:
-    command = String with the command and arguments, or a list of the same
-    rundir  = working directory to be used when the command is being executed
+    command   = String with the command and arguments, or a list of the same
+    cwd       = working directory to be used when the command is being executed
     pq_logger = Logging object to be used
     shell     = If a shell will be spawn to execute the command
     timeout   = for how long the command will be executed before assume it hanged
@@ -171,7 +169,7 @@ def get_command_output(command=None, rundir=None, pq_logger = None, shell=False,
     if len(command_list) > 0 :
       if ansible_module :
         try :
-          rc, stdout, stderr = ansible_module.run_command(command_string, cwd=rundir, environ_update=default_env)
+          rc, stdout, stderr = ansible_module.run_command(command_string, cwd=cwd, environ_update=default_env)
           ret = { 'stdout' : stdout.decode().split('\n') if stdout else [], 'stderr' : stderr.decode().split('\n') if stderr else [], 'retcode' : rc}
           if rc != 0 :
             ansible_module.fail_json(msg='Error Running command: %s'%command_string, rc=rc, stdout=stdout, stderr=stderr)
@@ -180,7 +178,7 @@ def get_command_output(command=None, rundir=None, pq_logger = None, shell=False,
           debug_post_msg(pq_logger, "Error when run : %s : msg : %s"%(command_string,e), err=True)
       else :
         try :
-          out = sp.run(command_list, capture_output=True, shell=True, cwd=rundir, timeout=timeout, env=default_env)
+          out = sp.run(command_list, capture_output=True, shell=shell, cwd=cwd, timeout=timeout, env=default_env)
           ret = { 'stdout' : out.stdout.decode().split('\n'), 'stderr' : out.stderr.decode().split('\n'), 'retcode' : out.returncode }
         except Exception as e :
           debug_post_msg(pq_logger, "Error when run : %s : msg : %s"%(command_string,e), err=True)
