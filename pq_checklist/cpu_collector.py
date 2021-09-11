@@ -16,7 +16,7 @@ class collector :
     '''
     self.config = config
     self.logger = logger
-    self.rundir = '/tmp'
+    self.cwd = '/tmp'
     # Stuff from config
     self.involuntarycontextswitch_ratio_target     = float(self.config['CPU']['involuntarycontextswitch_ratio'].split(' ')[0])
     self.involuntarycorecontextswitch_ratio_target = float(self.config['CPU']['involuntarycorecontextswitch_ratio'].split(' ')[0])
@@ -61,7 +61,7 @@ class collector :
     '''
     now = int(datetime.now().timestamp())
     if now - self.__smtlevel__['latest_read'] > 600 :
-      cmd_out = get_command_output(command='smtctl', rundir=self.rundir, pq_logger = self.logger)
+      cmd_out = get_command_output(command='smtctl', rundir=self.rundir, pq_logger = self.logger, cwd=self.cwd)
       cpu_count = 0
       thread_count = 0
       if cmd_out['retcode'] == 0 :
