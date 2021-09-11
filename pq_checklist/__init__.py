@@ -117,6 +117,7 @@ def line_cleanup(iterable, split=False, delimiter='', cleanup = True, remove_end
   Returns :
     Iterable
   '''
+  import unicodedata
   ret = iterable
 
   for ln in iterable :
@@ -124,7 +125,7 @@ def line_cleanup(iterable, split=False, delimiter='', cleanup = True, remove_end
       ln = ln.decode()
     if ln and cleanup :
       while "\t" in ln or '  ' in ln :
-        ln = ln.replace("\t", ' ').replace('  ', ' ').strip('')
+        ln = ''.join(c for c in ln if not unicodedata.category(c).startswith('C'))
       if remove_endln :
         lp = ln.split('\n')
         ln = ''.join(lp)
