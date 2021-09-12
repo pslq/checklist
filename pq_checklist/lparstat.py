@@ -25,7 +25,7 @@ class parser(StatsParser) :
         'stats' : self.parse_lparstat_stats
         }
 
-    self.data = { 'info' : defaultdict(lambda: -1), 'stats' : defaultdict(lambda: -1) }
+    self.data = { 'info' : {}, 'stats' : {} }
 
     # Internal list to hold all keys used when parsing lparstat data
     self.__stats_keys__ = []
@@ -48,16 +48,19 @@ class parser(StatsParser) :
   def parse_lparstat_i(self, data:list) :
     try :
       for dt in csv.reader(data, delimiter=':') :
-        key_name = dt[0].lower().strip(' ').replace(' ', '_')
-        key_value = dt[1].lower().strip(' ').replace(',','.')
-        if key_value[-2:] == "MB" :
+        key_name = dt[0].lower().strip(' ').replace(' ', '_').replace('/', '_')
+        key_value = dt[1].lower().strip(' ').replace(',','.').replace('%','')
+        if key_value[-2:].upper() == "MB" :
           key_value = try_conv_complex(key_value.split(' ')[0])
         elif key_value[-2:] == "GB" :
           key_value = try_conv_complex(key_value.split(' ')[0])
           if not isinstance(key_value, str) :
             key_value = key_value*1024
         else :
-          key_value = try_conv_complex(key_value)
+          if key_value == '-' :
+            key_value = 0
+          else :
+            key_value = try_conv_complex(key_value)
         self.data['info'][key_name] = key_value
     except Exception as e:
       debug_post_msg(self.logger, 'Error parsing info : %s'%e, err=True)
