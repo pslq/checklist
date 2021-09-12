@@ -23,6 +23,21 @@ class StatsParser() :
 
     return(None)
 
+
+#######################################################################################################################
+  def __getitem__(self,key):
+    '''
+    Return dict like results
+    '''
+    ret = None
+    if key in self.data.keys() :
+      ret = self.data[key]
+    return(ret)
+
+  def keys(self) :
+    return(self.data.keys())
+
+
   def collect(self, elements:list = [] ) :
     for i in elements :
       self.load_from_system(command_id = i)
