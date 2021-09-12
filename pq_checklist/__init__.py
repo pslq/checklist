@@ -123,16 +123,21 @@ def line_cleanup(iterable, split=False, delimiter='', cleanup = True, remove_end
   for ln in iterable :
     if isinstance(ln, bytes) :
       ln = ln.decode()
-    if ln and cleanup :
-      while "\t" in ln or '  ' in ln :
+    try :
+      if cleanup :
         ln = ''.join(c for c in ln if not unicodedata.category(c).startswith('C'))
+        while '  ' in ln :
+          ln = ln.strip().replace('\t',' ').replace('  ', ' ')
       if remove_endln :
         lp = ln.split('\n')
         ln = ''.join(lp)
-    if split :
-      yield(ln.split(delimiter))
-    else :
+      if split :
+        yield(ln.split(delimiter))
+      else :
+        yield(ln)
+    except :
       yield(ln)
+
 
 ########################################################################################################################
 # Helper to execute shell commands
