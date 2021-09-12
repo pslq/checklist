@@ -6,7 +6,7 @@ from . import avg_list
 import datetime
 
 class parser(StatsParser) :
-  def __init__(self, logger = None, ansible_module = None, samples = 2, interval = 1, rundir = '/tmp', preserv_stats = False, lparstat_data = None) :
+  def __init__(self, logger = None, ansible_module = None, samples = 2, interval = 1, cwd = '/tmp', preserv_stats = False, lparstat_data = None) :
     super().__init__()
 
     self.lparstat_data = lparstat_data

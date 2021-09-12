@@ -11,7 +11,7 @@ from collections import defaultdict
 from .stats_parser import StatsParser
 
 class parser(StatsParser) :
-  def __init__(self, logger = None, ansible_module = None, samples = 2, interval = 1, rundir = '/tmp', preserv_stats = False) :
+  def __init__(self, logger = None, ansible_module = None, samples = 2, interval = 1, cwd = '/tmp', preserv_stats = False) :
     '''
     '''
     super().__init__()
