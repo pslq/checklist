@@ -8,14 +8,14 @@ from collections import defaultdict
 
 
 class StatsParser() :
-  def __init__(self, logger = None, ansible_module = None, samples = 2, interval = 1, rundir = '/tmp' ):
+  def __init__(self, logger = None, ansible_module = None, samples = 2, interval = 1, cwd = '/tmp' ):
     '''
     General class with main parsers for stats commands
     '''
     self.samples        = int(samples)
     self.interval       = int(interval)
     self.logger         = logger
-    self.rundir         = rundir
+    self.cwd            = cwd
     self.ansible_module = ansible_module
     self.commands       = defaultdict(lambda: -1)
     self.functions      = defaultdict(lambda: -1)
@@ -47,8 +47,10 @@ class StatsParser() :
     if not parse_function :
       parse_function = self.functions[command_id]
 
-    cmd_out = get_command_output(command=self.commands[command_id], rundir=self.rundir,
-                                      pq_logger = self.logger, ansible_module = self.ansible_module)
+    cmd_out = get_command_output(command        =self.commands[command_id],
+                                 cwd            = self.cwd,
+                                 pq_logger      = self.logger,
+                                 ansible_module = self.ansible_module)
     if cmd_out['retcode'] == 0 :
       ret = parse_function(cmd_out['stdout'])
 
@@ -64,6 +66,29 @@ class StatsParser() :
           ret = parse_function(ret)
     except Exception as e :
       debug_post_msg(self.logger, 'Error opening %s : %s'%(filename,e), err=True)
+    return(ret)
+
+  def parse_net_v_stat_stats(self, data:list, has_paragraphs:bool=True):
+    ret = {}
+    cur_key = ''
+    exclude = ( '(', '<', '>', ')', '/', '\'' )
+    for ln in line_cleanup(data, remove_endln=True) :
+      sp = ln.split(' ')
+      if len(sp) == 1 and sp[0].endswith(':') and has_paragraphs :
+        cur_key = sp[0].rstrip(':')
+      else :
+        key,val = 1,0
+        if sp[-1].isnumeric() :
+          key,val = 0,-1
+        kt = '_'.join([ sp[v] for v in range(key,len(sp)-abs(val)) if not any([ Z in sp[v] for Z in exclude]) ]).lower().replace('.', '').replace(':','')
+        vn = try_conv_complex(sp[val])
+        if has_paragraphs :
+          try :
+            ret[cur_key][kt] = vn
+          except :
+            ret[cur_key] = { kt : vn }
+        else :
+          ret[kt] = vn
     return(ret)
 
   def parse_sar_stats(self, data:list, key_heading:str='cpu', \
