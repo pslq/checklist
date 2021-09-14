@@ -27,12 +27,14 @@ class collector :
     self.samples            = self.config['CPU']['samples']
     self.interval           = self.config['CPU']['interval']
     self.to_collectors      = dict(logger = self.logger, samples = self.config['CPU']['samples'],
-                                   interval = self.config['CPU']['interval'], rundir = self.rundir)
+                                   interval = self.config['CPU']['interval'], cwd = self.cwd)
     self.__smtlevel__       = { 'cpu_count' : 0, 'thread_count' : 0, 'latest_read' : 0 }
 
     # objects that provide measurements
+    self.bos           = bos_info(logger = self.logger, cwd=self.cwd)
+
     self.lparstat_parser = lparstat_parser(**self.to_collectors)
-    self.mpstat_parser   = mpstat_parser(**self.to_collectors, lparstat_data=self.lparstat_parser)
+    self.mpstat_parser   = mpstat_parser(**self.to_collectors, bos_data = self.bos)
     self.measurement_providers = [ self.lparstat_parser, self.mpstat_parser ]
     self.measurement_type = [ [ 'stats' ], [ 'stats' ]]
 
@@ -61,7 +63,7 @@ class collector :
     '''
     now = int(datetime.now().timestamp())
     if now - self.__smtlevel__['latest_read'] > 600 :
-      cmd_out = get_command_output(command='smtctl', rundir=self.rundir, pq_logger = self.logger, cwd=self.cwd)
+      cmd_out = get_command_output(command='smtctl', cwd=self.cwd, pq_logger = self.logger)
       cpu_count = 0
       thread_count = 0
       if cmd_out['retcode'] == 0 :

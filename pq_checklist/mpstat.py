@@ -6,10 +6,10 @@ from . import avg_list
 import datetime
 
 class parser(StatsParser) :
-  def __init__(self, logger = None, ansible_module = None, samples = 2, interval = 1, cwd = '/tmp', preserv_stats = False, lparstat_data = None) :
+  def __init__(self, logger = None, ansible_module = None, samples = 2, interval = 1, cwd = '/tmp', preserv_stats = False, bos_data = None) :
     super().__init__()
 
-    self.lparstat_data = lparstat_data
+    self.bos_data = bos_data
     self.preserv_stats = preserv_stats
     self.commands = {
         'stats' : "mpstat -a %d %d"%(self.interval, self.samples)
@@ -27,8 +27,8 @@ class parser(StatsParser) :
   def get_latest_measurements(self, elements = [ 'stats' ], consolidate_function = avg_list, use_existent:bool=True) :
     if not use_existent or len(self.__stats_keys__) < 1 :
       self.collect(elements = elements)
-    if self.lparstat_data :
-      to_be_added = {'measurement' : 'mpstat', 'tags' : { 'host' : self.lparstat_data.collect(elements=['info'])['info']['node_name'] }, 'fields' : { 'time' : int(datetime.datetime.now().timestamp()) } }
+    if self.bos_data :
+      to_be_added = {'measurement' : 'mpstat', 'tags' : { 'host' : self.bos_data['bos']['hostname'] }, 'fields' : { 'time' : int(datetime.datetime.now().timestamp()) } }
     else :
       to_be_added = {'measurement' : 'mpstat', 'tags' : { }, 'fields' : { 'time' : int(datetime.datetime.now().timestamp()) } }
 

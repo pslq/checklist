@@ -11,7 +11,7 @@ from .stats_parser import StatsParser
 class bos(StatsParser) :
   def __init__(self, logger = None, ansible_module = None, cwd = '/tmp', preserv_stats = False) :
     '''
-
+    Class with Basic OS information
     '''
     super().__init__()
     self.preserv_stats  = preserv_stats
@@ -44,11 +44,23 @@ class bos(StatsParser) :
         }
 
     self.functions = {
-        'lsdev_class' : self.parse_lsdev_class
+        'lsdev_class' : self.parse_lsdev_class,
+        'uname' : self.parse_uname_a
         }
 
-    self.data = { 'dev' : {}, 'dev_class' : {} }
+    self.data = { 'dev' : {}, 'dev_class' : {}, 'bos' : {}  }
     return(None)
+
+  def parse_uname_a(self, data:list) -> dict :
+    for l in line_cleanup(data, remove_endln=True, split=True, delimiter=' ') :
+      if len(l) > 4 :
+        self.data['bos']['os']             = l[0].strip().lower()
+        self.data['bos']['hostname']       = l[1].strip().lower()
+        if self.data['bos']['os'] == "aix" :
+          self.data['bos']['kernel_version'] = l[2]+l[3]
+        else :
+          self.data['bos']['kernel_version'] = l[2]
+    return(self.data['bos'])
 
 
   def parse_lsdev_class(self, data:list) -> dict :

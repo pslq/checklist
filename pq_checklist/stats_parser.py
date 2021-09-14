@@ -30,6 +30,13 @@ class StatsParser() :
     Return dict like results
     '''
     ret = None
+
+    # Auto update itself in case the key is empty
+    if key not in self.data :
+      self.collect()
+    elif len(self.data[key]) == 0 :
+      self.collect()
+
     if key in self.data.keys() :
       ret = self.data[key]
     return(ret)
@@ -38,6 +45,7 @@ class StatsParser() :
     return(self.data.keys())
 
 
+#######################################################################################################################
   def collect(self, elements:list = [] ) :
     '''
     Collect data from the system for specific elements ( objects )
@@ -299,5 +307,4 @@ class StatsParser() :
       debug_post_msg(self.logger, 'Error during parse_sar_stats: %s'%e, err=True)
     return(ret,keys)
 
-#######################################################################################################################
 #######################################################################################################################
