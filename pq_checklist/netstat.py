@@ -10,20 +10,32 @@ import csv, datetime
 from .stats_parser import StatsParser
 
 class parser(StatsParser) :
-  def __init__(self, logger = None, ansible_module = None, cwd = '/tmp', preserv_stats = False) :
+  def __init__(self, logger = None, ansible_module = None, cwd = '/tmp', preserv_stats = False, bos_data = None) :
     '''
     '''
     super().__init__()
-    self.preserv_stats  = preserv_stats
-    self.commands = {
-        'stats_general' : "netstat -s",
-        'stats_sockets' : "netstat -aon"
-        }
-    self.functions = {
-        'stats_general' : self.parse_netstat_s
-        }
+    self.bos_data      = bos_data
+    self.preserv_stats = preserv_stats
+    self.commands      = {
+                           'stats_general' : "netstat -s",
+                           'stats_sockets' : "netstat -aon"
+                          }
+    self.functions     = {
+                           'stats_general' : self.parse_netstat_s
+                         }
+
+    self.data = { 'stats_general' : {} }
 
     return(None)
+
+  def get_latest_measurements(self) :
+    ret = []
+    self.collect()
+    try :
+      ret = [ {'measurement' : 'netstat_general_%s'%k, 'tags' : { 'host' : self.bos_data['bos']['hostname'] }, 'fields' : { **v,  **{ 'time' : int(datetime.datetime.now().timestamp()) } }}  for k,v in self.data['stats_general'].items() ]
+    except Exception as e :
+      debug_post_msg(self.logger, 'Error parsing info : %s'%e, err=True)
+    return(ret)
 
 
   def parse_netstat_s(self, data:list) :
