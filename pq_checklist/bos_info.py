@@ -16,8 +16,8 @@ class bos(StatsParser) :
     super().__init__()
     self.preserv_stats  = preserv_stats
     self.commands = {
+        'lsdev_class' : "lsdev -C -H -S a -F name:class:subclass:type",
         'lsdev_loc'   : "lsdev -C -c adapter -F 'name class location physloc'",
-        'lsdev_class' : "lsdev -C -H -S a -F 'name class subclass type'",
         'lscfg'       : "lscfg",
         'oslevel_r'   : "oslevel -s",
         'oslevel_s'   : "oslevel -r",
@@ -52,7 +52,7 @@ class bos(StatsParser) :
 
 
   def parse_lsdev_class(self, data:list) -> dict :
-    for l in line_cleanup(data, remove_endln=True, split=True, delimiter=' ') :
+    for l in line_cleanup(data, remove_endln=True, split=True, delimiter=':') :
       if len(l) == 4 :
         if l[0] != "name" and l[1] != "class" :
           try :

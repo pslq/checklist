@@ -16,7 +16,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     platforms=["Linux", "AIX", "Unix"],
-    packages=['pq_checklist'],
+    packages=setuptools.find_packages(exclude=('tests'))
     url="https://github.com/pslq/checklist-aix",
     classifiers=[
         "Programming Language :: Python :: 3",

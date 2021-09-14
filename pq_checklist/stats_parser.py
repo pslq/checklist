@@ -59,17 +59,17 @@ class StatsParser() :
         retcode -> Return code of the actual command executed, if != 0, the dict ovject might be empty
     '''
     ret = None
-    if not parse_function :
-      if command_id in self.functions :
+    if command_id :
+      if not parse_function and command_id in self.functions :
         parse_function = self.functions[command_id]
-
-    cmd_out = get_command_output(command        =self.commands[command_id],
-                                 cwd            = self.cwd,
-                                 pq_logger      = self.logger,
-                                 ansible_module = self.ansible_module)
-    if cmd_out['retcode'] == 0 :
-      ret = parse_function(cmd_out['stdout'])
-
+  
+      cmd_out = get_command_output(command        =self.commands[command_id],
+                                   cwd            = self.cwd,
+                                   pq_logger      = self.logger,
+                                   ansible_module = self.ansible_module)
+      if cmd_out['retcode'] == 0 :
+        ret = parse_function(cmd_out['stdout'])
+  
     return(ret, cmd_out['retcode'])
 
 
