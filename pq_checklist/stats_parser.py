@@ -17,8 +17,8 @@ class StatsParser() :
     self.logger         = logger
     self.cwd            = cwd
     self.ansible_module = ansible_module
-    self.commands       = defaultdict(lambda: -1)
-    self.functions      = defaultdict(lambda: -1)
+    self.commands       = {}
+    self.functions      = {}
     self.data           = { 'info' : defaultdict(lambda: -1), 'stats' : defaultdict(lambda: -1) }
 
     return(None)
@@ -39,6 +39,15 @@ class StatsParser() :
 
 
   def collect(self, elements:list = [] ) :
+    '''
+    Collect data from the system for specific elements ( objects )
+    '''
+    # in case commands dict still not initialized
+    if len(self.commands.keys()) == 0 and "update_commands" in self.__dir__() :
+      self.update_commands()
+    # If no element is passed, collect data from all of them
+    if len(elements) == 0 :
+      elements = [ c for c in self.commands.keys() if c in self.functions ]
     for i in elements :
       self.load_from_system(command_id = i)
     return(self.data)
@@ -62,14 +71,14 @@ class StatsParser() :
     if command_id :
       if not parse_function and command_id in self.functions :
         parse_function = self.functions[command_id]
-  
+
       cmd_out = get_command_output(command        =self.commands[command_id],
                                    cwd            = self.cwd,
                                    pq_logger      = self.logger,
                                    ansible_module = self.ansible_module)
       if cmd_out['retcode'] == 0 :
         ret = parse_function(cmd_out['stdout'])
-  
+
     return(ret, cmd_out['retcode'])
 
 
