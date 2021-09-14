@@ -1,0 +1,629 @@
+-------------------------------------------------------------
+ETHERNET STATISTICS (en4) :
+Device Type: IEEE 802.3ad Link Aggregation
+Hardware Address: 98:be:94:77:bb:7e
+Elapsed Time: 3 days 5 hours 15 minutes 26 seconds
+
+Transmit Statistics:                          Receive Statistics:
+--------------------                          -------------------
+Packets: 1743505                              Packets: 11042941
+Bytes: 197535808                              Bytes: 802353777
+Interrupts: 1659977                           Interrupts: 9377269
+Transmit Errors: 0                            Receive Errors: 0
+Packets Dropped: 0                            Packets Dropped: 0
+                                              Bad Packets: 0
+Max Packets on S/W Transmit Queue: 6         
+S/W Transmit Queue Overflow: 0
+Current S/W+H/W Transmit Queue Length: 0
+
+Broadcast Packets: 217                        Broadcast Packets: 9484363
+Multicast Packets: 18663                      Multicast Packets: 95215
+No Carrier Sense: 0                           CRC Errors: 0
+DMA Underrun: 0                               DMA Overrun: 0
+Lost CTS Errors: 0                            Alignment Errors: 0
+Max Collision Errors: 0                       No Resource Errors: 0
+Late Collision Errors: 0                      Receive Collision Errors: 0
+Deferred: 0                                   Packet Too Short Errors: 0
+SQE Test: 0                                   Packet Too Long Errors: 0
+Timeout Errors: 0                             Packets Discarded by Adapter: 0
+Single Collision Count: 0                     Receiver Start Count: 0
+Multiple Collision Count: 0
+Current HW Transmit Queue Length: 0
+
+General Statistics:
+-------------------
+No mbuf Errors: 0
+Adapter Reset Count: 0
+Adapter Data Rate: 2000
+Driver Flags: Up Broadcast Running 
+	Simplex 64BitSupport ChecksumOffload 
+	LargeSend DataRateSet ETHERCHANNEL 
+	IPV6_LSO IPV6_CSO 
+
+=============================================================
+=============================================================
+
+Statistics for every adapter in the IEEE 802.3ad Link Aggregation:
+------------------------------------------------------------------
+
+Number of primary adapters: 2
+Number of backup adapters: 0
+Active channel: primary channel
+Operating mode: Standard mode (IEEE 802.3ad)
+IEEE 802.3ad Link Aggregation Statistics:
+Primary Aggregation status: Aggregated
+	LACPDU Interval: Long	Received LACPDUs: 18551
+	Transmitted LACPDUs: 18548
+	Received marker PDUs: 0
+	Transmitted marker PDUs: 0
+	Received marker response PDUs: 0
+	Transmitted marker response PDUs: 0
+	Received unknown PDUs: 0
+	Received illegal PDUs: 0
+Hash mode: Source and destination TCP/UDP ports
+MAC swap: disabled
+=============================================================
+
+                     PRIMARY ADAPTERS
+
+=============================================================
+
+-------------------------------------------------------------
+
+ETHERNET STATISTICS (ent2) :
+Device Type: PCIe2 4-Port Adapter (1GbE RJ45) (e4148a1614109404)
+Hardware Address: 98:be:94:77:bb:7e
+
+Transmit Statistics:                          Receive Statistics:
+--------------------                          -------------------
+Packets: 832572                               Packets: 5565555
+Bytes: 78310552                               Bytes: 417092344
+Interrupts: 799252                            Interrupts: 3979897
+Transmit Errors: 0                            Receive Errors: 0
+Packets Dropped: 0                            Packets Dropped: 0
+                                              Bad Packets: 0
+Max Packets on S/W Transmit Queue: 3         
+S/W Transmit Queue Overflow: 0
+Current S/W+H/W Transmit Queue Length: 0
+
+Broadcast Packets: 0                          Broadcast Packets: 4829138
+Multicast Packets: 9276                       Multicast Packets: 35921
+No Carrier Sense: 0                           CRC Errors: 0
+DMA Underrun: 0                               DMA Overrun: 0
+Lost CTS Errors: 0                            Alignment Errors: 0
+Max Collision Errors: 0                       No Resource Errors: 0
+Late Collision Errors: 0                      Receive Collision Errors: 0
+Deferred: 0                                   Packet Too Short Errors: 0
+SQE Test: 0                                   Packet Too Long Errors: 0
+Timeout Errors: 0                             Packets Discarded by Adapter: 0
+Single Collision Count: 0                     Receiver Start Count: 0
+Multiple Collision Count: 0
+Current HW Transmit Queue Length: 0
+
+General Statistics:
+-------------------
+No mbuf Errors: 0
+Adapter Reset Count: 1
+Adapter Data Rate: 2000
+Driver Flags: Up Broadcast Running 
+	Simplex 64BitSupport ChecksumOffload 
+	LargeSend DataRateSet IPV6_LSO 
+	IPV6_CSO LARGE_RECEIVE ECHAN_ELEM 
+
+PCIe2 4-Port Adapter (1GbE RJ45) (e4148a1614109404)
+-------------------------------------------------------------
+
+Device Statistics:
+------------------
+Device ID: e4148a1614109404
+Version: 1
+Physical Port Link Status: Up
+Logical Port Link Status: Up
+Physical Port Speed: 1 Gbps Full Duplex
+PCI Mode: PCI-Express X8
+	PCIe Link Speed: 5.0 GT/s
+	TLP Size: 512
+	MRR Size: 4096
+	Relaxed Ordering: Enabled
+Assigned Interrupt Source Numbers: 5
+	320	MGT
+	321	NIC TX,RX
+	322	NIC RX
+	323	NIC RX
+	324	NIC RX
+Unassigned Interrupt Source Numbers: 27
+External Loopback Changeable: No
+External Loopback: Disabled
+Internal Loopback: Disabled
+Physical Port Promiscuous Mode Changeable: Yes
+Physical Port Promiscuous Mode: Disabled
+Logical Port Promiscuous Mode: Disabled
+Physical Port All Multicast Mode Changeable: Yes
+Physical Port All Multicast Mode: Disabled
+Logical Port All Multicast Mode: Disabled
+Multicast Addresses Enabled: 3
+Maximum Exact Match Multicast Filters: 0
+Maximum Inexact Match Multicast Filters: 256
+Physical Port MTU Changeable: Yes
+Physical Port MTU: 1514
+Logical Port MTU: 1514
+Jumbo Frames: Disabled
+Enabled VLAN IDs: None
+Maximum DMA Page Size: 4096
+Transmit and receive flow control status: Enabled
+	Number of XOFF packets transmitted: 0
+	Number of XON packets transmitted: 0
+	Number of XOFF packets received: 0
+	Number of XON packets received: 0
+Receive TCP Segment Aggregation: Enabled
+	Receive TCP Segment Aggregation Large Packets Created: 1024
+	Receive TCP Packets Aggregated into Large Packets: 1513
+	Receive TCP Payload Bytes Aggregated into Large Packets: 2109032
+	Receive TCP Segment Aggregation Average Packets Aggregated: 1
+	Receive TCP Segment Aggregation Maximum Packets Aggregated: 3
+Transmit TCP Segmentation Offload: Enabled
+	Transmit TCP Segmentation Offload Packets Transmitted: 279
+	Transmit TCP Segmentation Offload Maximum Packet Size: 59950
+	Minimum MSS Mode: Disabled
+Transmit Cumulative Statistics:
+	Transmit Padded Packets: 0
+Transmit Q0 Statistics:
+	Transmit Q Packets: 832575
+	Transmit Q Multicast Packets: 9276
+	Transmit Q Broadcast Packets: 0
+	Transmit Q Flip and Run Packets: 383872
+	Transmit Q Bytes: 78311310
+	Transmit Q No Buffers: 0
+	Transmit Q Dropped Packets: 0
+	Transmit SWQ Cur Packets: 0
+	Transmit SWQ Max Packets: 3
+	Transmit SWQ Dropped Packets: 0
+	Transmit OFQ Cur Packets: 0
+	Transmit OFQ Max Packets: 0
+Receive Q0 Statistics:
+	Receive Q Packets: 4766768
+	Receive Q Multicast Packets: 11379
+	Receive Q Broadcast Packets: 4575759
+	Receive Q Bytes: 303902812
+	Receive Q No Buffers: 0
+	Receive Q Errors: 0
+	Receive Q Dropped Packets: 0
+Receive Q1 Statistics:
+	Receive Q Packets: 331078
+	Receive Q Multicast Packets: 12616
+	Receive Q Broadcast Packets: 132754
+	Receive Q Bytes: 61204222
+	Receive Q No Buffers: 0
+	Receive Q Errors: 0
+	Receive Q Dropped Packets: 0
+Receive Q2 Statistics:
+	Receive Q Packets: 269749
+	Receive Q Multicast Packets: 3822
+	Receive Q Broadcast Packets: 93812
+	Receive Q Bytes: 30052248
+	Receive Q No Buffers: 0
+	Receive Q Errors: 0
+	Receive Q Dropped Packets: 0
+Receive Q3 Statistics:
+	Receive Q Packets: 197960
+	Receive Q Multicast Packets: 8104
+	Receive Q Broadcast Packets: 26813
+	Receive Q Bytes: 21933062
+	Receive Q No Buffers: 0
+	Receive Q Errors: 0
+	Receive Q Dropped Packets: 0
+
+Additional Statistics:
+----------------------
+rx_bytes:	439349280
+rx_error_bytes:	0
+rx_ucast_packets:	700496
+rx_mcast_packets:	35921
+rx_bcast_packets:	4829063
+rx_crc_errors:	0
+rx_align_errors:	0
+rx_undersize_packets:	0
+rx_oversize_packets:	0
+rx_fragments:	0
+rx_jabbers:	0
+rx_discards:	0
+rx_filtered_packets:	1319190
+rx_mf_tag_discard:	0
+pfc_frames_received:	0
+pfc_frames_sent:	0
+rx_brb_discard:	0
+rx_brb_truncate:	0
+rx_pause_frames:	0
+rx_mac_ctrl_frames:	0
+rx_constant_pause_events:	0
+rx_phy_ip_err_discards:	0
+rx_csum_offload_errors:	0
+tx_bytes:	81730588
+tx_error_bytes:	0
+tx_ucast_packets:	824729
+tx_mcast_packets:	9276
+tx_bcast_packets:	0
+tx_mac_errors:	0
+tx_carrier_errors:	0
+tx_single_collisions:	0
+tx_multi_collisions:	0
+tx_deferred:	0
+tx_excess_collisions:	0
+tx_late_collisions:	0
+tx_total_collisions:	0
+tx_64_byte_packets:	10203
+tx_65_to_127_byte_packets:	766278
+tx_128_to_255_byte_packets:	36714
+tx_256_to_511_byte_packets:	12741
+tx_512_to_1023_byte_packets:	4926
+tx_1024_to_1522_byte_packets:	3142
+tx_1523_to_9022_byte_packets:	0
+tx_pause_frames:	0
+recoverable_errors:	0
+unrecoverable_errors:	0
+Tx LPI entry count:	0
+	[q-0]: rx_bytes:	322965212
+	[q-0]: rx_ucast_packets:	179630
+	[q-0]: rx_mcast_packets:	11379
+	[q-0]: rx_bcast_packets:	4575686
+	[q-0]: rx_discards:	0
+	[q-0]: rx_phy_ip_err_discards:	0
+	[q-0]: rx_csum_offload_errors:	0
+	[q-0]: tx_bytes:	81730588
+	[q-0]: tx_ucast_packets:	824729
+	[q-0]: tx_mcast_packets:	9276
+	[q-0]: tx_bcast_packets:	0
+	[q-1]: rx_bytes:	62527922
+	[q-1]: rx_ucast_packets:	185708
+	[q-1]: rx_mcast_packets:	12616
+	[q-1]: rx_bcast_packets:	132752
+	[q-1]: rx_discards:	0
+	[q-1]: rx_phy_ip_err_discards:	0
+	[q-1]: rx_csum_offload_errors:	0
+	[q-1]: tx_bytes:	0
+	[q-1]: tx_ucast_packets:	0
+	[q-1]: tx_mcast_packets:	0
+	[q-1]: tx_bcast_packets:	0
+	[q-2]: rx_bytes:	31131244
+	[q-2]: rx_ucast_packets:	172115
+	[q-2]: rx_mcast_packets:	3822
+	[q-2]: rx_bcast_packets:	93812
+	[q-2]: rx_discards:	0
+	[q-2]: rx_phy_ip_err_discards:	0
+	[q-2]: rx_csum_offload_errors:	0
+	[q-2]: tx_bytes:	0
+	[q-2]: tx_ucast_packets:	0
+	[q-2]: tx_mcast_packets:	0
+	[q-2]: tx_bcast_packets:	0
+	[q-3]: rx_bytes:	22724902
+	[q-3]: rx_ucast_packets:	163043
+	[q-3]: rx_mcast_packets:	8104
+	[q-3]: rx_bcast_packets:	26813
+	[q-3]: rx_discards:	0
+	[q-3]: rx_phy_ip_err_discards:	0
+	[q-3]: rx_csum_offload_errors:	0
+	[q-3]: tx_bytes:	0
+	[q-3]: tx_ucast_packets:	0
+	[q-3]: tx_mcast_packets:	0
+	[q-3]: tx_bcast_packets:	0
+
+IEEE 802.3ad Port Statistics:
+-----------------------------
+	Actor System Priority: 0x8000
+	Actor System: 98-BE-94-77-BB-7E
+	Actor Operational Key: 0xBEEF
+	Actor Port Priority: 0x0080
+	Actor Port: 0x0003
+	Actor State: 
+		LACP activity: Active
+		LACP timeout: Long
+		Aggregation: Aggregatable
+		Synchronization: IN_SYNC
+		Collecting: Enabled
+		Distributing: Enabled
+		Defaulted: False
+		Expired: False
+
+	Partner System Priority: 0x0000
+	Partner System: 00-04-96-CD-75-1B
+	Partner Operational Key: 0x03E9
+	Partner Port Priority: 0x0000
+	Partner Port: 0x03EB
+	Partner State: 
+		LACP activity: Active
+		LACP timeout: Long
+		Aggregation: Aggregatable
+		Synchronization: IN_SYNC
+		Collecting: Enabled
+		Distributing: Enabled
+		Defaulted: False
+		Expired: False
+
+	Received LACPDUs: 9276
+	Transmitted LACPDUs: 9274
+	Received marker PDUs: 0
+	Transmitted marker PDUs: 0
+	Received marker response PDUs: 0
+	Transmitted marker response PDUs: 0
+	Received unknown PDUs: 0
+	Received illegal PDUs: 0
+
+-------------------------------------------------------------
+
+ETHERNET STATISTICS (ent3) :
+Device Type: PCIe2 4-Port Adapter (1GbE RJ45) (e4148a1614109404)
+Hardware Address: 98:be:94:77:bb:7e
+
+Transmit Statistics:                          Receive Statistics:
+--------------------                          -------------------
+Packets: 910936                               Packets: 5477386
+Bytes: 119226222                              Bytes: 385261433
+Interrupts: 860728                            Interrupts: 5397372
+Transmit Errors: 0                            Receive Errors: 0
+Packets Dropped: 0                            Packets Dropped: 0
+                                              Bad Packets: 0
+Max Packets on S/W Transmit Queue: 3         
+S/W Transmit Queue Overflow: 0
+Current S/W+H/W Transmit Queue Length: 0
+
+Broadcast Packets: 217                        Broadcast Packets: 4655225
+Multicast Packets: 9387                       Multicast Packets: 59294
+No Carrier Sense: 0                           CRC Errors: 0
+DMA Underrun: 0                               DMA Overrun: 0
+Lost CTS Errors: 0                            Alignment Errors: 0
+Max Collision Errors: 0                       No Resource Errors: 0
+Late Collision Errors: 0                      Receive Collision Errors: 0
+Deferred: 0                                   Packet Too Short Errors: 0
+SQE Test: 0                                   Packet Too Long Errors: 0
+Timeout Errors: 0                             Packets Discarded by Adapter: 0
+Single Collision Count: 0                     Receiver Start Count: 0
+Multiple Collision Count: 0
+Current HW Transmit Queue Length: 0
+
+General Statistics:
+-------------------
+No mbuf Errors: 0
+Adapter Reset Count: 1
+Adapter Data Rate: 2000
+Driver Flags: Up Broadcast Running 
+	Simplex 64BitSupport ChecksumOffload 
+	LargeSend DataRateSet IPV6_LSO 
+	IPV6_CSO LARGE_RECEIVE ECHAN_ELEM 
+
+PCIe2 4-Port Adapter (1GbE RJ45) (e4148a1614109404)
+-------------------------------------------------------------
+
+Device Statistics:
+------------------
+Device ID: e4148a1614109404
+Version: 1
+Physical Port Link Status: Up
+Logical Port Link Status: Up
+Physical Port Speed: 1 Gbps Full Duplex
+PCI Mode: PCI-Express X8
+	PCIe Link Speed: 5.0 GT/s
+	TLP Size: 512
+	MRR Size: 4096
+	Relaxed Ordering: Enabled
+Assigned Interrupt Source Numbers: 5
+	352	MGT
+	353	NIC TX,RX
+	354	NIC RX
+	355	NIC RX
+	356	NIC RX
+Unassigned Interrupt Source Numbers: 27
+External Loopback Changeable: No
+External Loopback: Disabled
+Internal Loopback: Disabled
+Physical Port Promiscuous Mode Changeable: Yes
+Physical Port Promiscuous Mode: Disabled
+Logical Port Promiscuous Mode: Disabled
+Physical Port All Multicast Mode Changeable: Yes
+Physical Port All Multicast Mode: Disabled
+Logical Port All Multicast Mode: Disabled
+Multicast Addresses Enabled: 3
+Maximum Exact Match Multicast Filters: 0
+Maximum Inexact Match Multicast Filters: 256
+Physical Port MTU Changeable: Yes
+Physical Port MTU: 1514
+Logical Port MTU: 1514
+Jumbo Frames: Disabled
+Enabled VLAN IDs: None
+Maximum DMA Page Size: 4096
+Transmit and receive flow control status: Enabled
+	Number of XOFF packets transmitted: 0
+	Number of XON packets transmitted: 0
+	Number of XOFF packets received: 0
+	Number of XON packets received: 0
+Receive TCP Segment Aggregation: Enabled
+	Receive TCP Segment Aggregation Large Packets Created: 28011
+	Receive TCP Packets Aggregated into Large Packets: 28705
+	Receive TCP Payload Bytes Aggregated into Large Packets: 39506685
+	Receive TCP Segment Aggregation Average Packets Aggregated: 1
+	Receive TCP Segment Aggregation Maximum Packets Aggregated: 3
+Transmit TCP Segmentation Offload: Enabled
+	Transmit TCP Segmentation Offload Packets Transmitted: 6249
+	Transmit TCP Segmentation Offload Maximum Packet Size: 56538
+	Minimum MSS Mode: Disabled
+Transmit Cumulative Statistics:
+	Transmit Padded Packets: 0
+Transmit Q0 Statistics:
+	Transmit Q Packets: 910936
+	Transmit Q Multicast Packets: 9387
+	Transmit Q Broadcast Packets: 217
+	Transmit Q Flip and Run Packets: 355346
+	Transmit Q Bytes: 119226222
+	Transmit Q No Buffers: 0
+	Transmit Q Dropped Packets: 0
+	Transmit SWQ Cur Packets: 0
+	Transmit SWQ Max Packets: 3
+	Transmit SWQ Dropped Packets: 0
+	Transmit OFQ Cur Packets: 0
+	Transmit OFQ Max Packets: 0
+Receive Q0 Statistics:
+	Receive Q Packets: 4620053
+	Receive Q Multicast Packets: 13158
+	Receive Q Broadcast Packets: 4418175
+	Receive Q Bytes: 289855121
+	Receive Q No Buffers: 0
+	Receive Q Errors: 0
+	Receive Q Dropped Packets: 0
+Receive Q1 Statistics:
+	Receive Q Packets: 326714
+	Receive Q Multicast Packets: 5707
+	Receive Q Broadcast Packets: 105036
+	Receive Q Bytes: 39536854
+	Receive Q No Buffers: 0
+	Receive Q Errors: 0
+	Receive Q Dropped Packets: 0
+Receive Q2 Statistics:
+	Receive Q Packets: 311129
+	Receive Q Multicast Packets: 33398
+	Receive Q Broadcast Packets: 83626
+	Receive Q Bytes: 29839803
+	Receive Q No Buffers: 0
+	Receive Q Errors: 0
+	Receive Q Dropped Packets: 0
+Receive Q3 Statistics:
+	Receive Q Packets: 219490
+	Receive Q Multicast Packets: 7031
+	Receive Q Broadcast Packets: 48388
+	Receive Q Bytes: 26029655
+	Receive Q No Buffers: 0
+	Receive Q Errors: 0
+	Receive Q Dropped Packets: 0
+
+Additional Statistics:
+----------------------
+rx_bytes:	407162874
+rx_error_bytes:	0
+rx_ucast_packets:	762828
+rx_mcast_packets:	59294
+rx_bcast_packets:	4655211
+rx_crc_errors:	0
+rx_align_errors:	0
+rx_undersize_packets:	0
+rx_oversize_packets:	0
+rx_fragments:	0
+rx_jabbers:	0
+rx_discards:	0
+rx_filtered_packets:	1221689
+rx_mf_tag_discard:	0
+pfc_frames_received:	0
+pfc_frames_sent:	0
+rx_brb_discard:	0
+rx_brb_truncate:	0
+rx_pause_frames:	0
+rx_mac_ctrl_frames:	0
+rx_constant_pause_events:	0
+rx_phy_ip_err_discards:	0
+rx_csum_offload_errors:	0
+tx_bytes:	124256253
+tx_error_bytes:	0
+tx_ucast_packets:	922697
+tx_mcast_packets:	9387
+tx_bcast_packets:	217
+tx_mac_errors:	0
+tx_carrier_errors:	0
+tx_single_collisions:	0
+tx_multi_collisions:	0
+tx_deferred:	0
+tx_excess_collisions:	0
+tx_late_collisions:	0
+tx_total_collisions:	0
+tx_64_byte_packets:	11305
+tx_65_to_127_byte_packets:	801552
+tx_128_to_255_byte_packets:	75756
+tx_256_to_511_byte_packets:	12367
+tx_512_to_1023_byte_packets:	4963
+tx_1024_to_1522_byte_packets:	26357
+tx_1523_to_9022_byte_packets:	0
+tx_pause_frames:	0
+recoverable_errors:	0
+unrecoverable_errors:	0
+Tx LPI entry count:	0
+	[q-0]: rx_bytes:	308333849
+	[q-0]: rx_ucast_packets:	188715
+	[q-0]: rx_mcast_packets:	13158
+	[q-0]: rx_bcast_packets:	4418162
+	[q-0]: rx_discards:	0
+	[q-0]: rx_phy_ip_err_discards:	0
+	[q-0]: rx_csum_offload_errors:	0
+	[q-0]: tx_bytes:	124256253
+	[q-0]: tx_ucast_packets:	922697
+	[q-0]: tx_mcast_packets:	9387
+	[q-0]: tx_bcast_packets:	217
+	[q-1]: rx_bytes:	40842336
+	[q-1]: rx_ucast_packets:	215961
+	[q-1]: rx_mcast_packets:	5707
+	[q-1]: rx_bcast_packets:	105035
+	[q-1]: rx_discards:	0
+	[q-1]: rx_phy_ip_err_discards:	0
+	[q-1]: rx_csum_offload_errors:	0
+	[q-1]: tx_bytes:	0
+	[q-1]: tx_ucast_packets:	0
+	[q-1]: tx_mcast_packets:	0
+	[q-1]: tx_bcast_packets:	0
+	[q-2]: rx_bytes:	31079074
+	[q-2]: rx_ucast_packets:	194081
+	[q-2]: rx_mcast_packets:	33398
+	[q-2]: rx_bcast_packets:	83626
+	[q-2]: rx_discards:	0
+	[q-2]: rx_phy_ip_err_discards:	0
+	[q-2]: rx_csum_offload_errors:	0
+	[q-2]: tx_bytes:	0
+	[q-2]: tx_ucast_packets:	0
+	[q-2]: tx_mcast_packets:	0
+	[q-2]: tx_bcast_packets:	0
+	[q-3]: rx_bytes:	26907615
+	[q-3]: rx_ucast_packets:	164071
+	[q-3]: rx_mcast_packets:	7031
+	[q-3]: rx_bcast_packets:	48388
+	[q-3]: rx_discards:	0
+	[q-3]: rx_phy_ip_err_discards:	0
+	[q-3]: rx_csum_offload_errors:	0
+	[q-3]: tx_bytes:	0
+	[q-3]: tx_ucast_packets:	0
+	[q-3]: tx_mcast_packets:	0
+	[q-3]: tx_bcast_packets:	0
+
+IEEE 802.3ad Port Statistics:
+-----------------------------
+	Actor System Priority: 0x8000
+	Actor System: 98-BE-94-77-BB-7E
+	Actor Operational Key: 0xBEEF
+	Actor Port Priority: 0x0080
+	Actor Port: 0x0004
+	Actor State: 
+		LACP activity: Active
+		LACP timeout: Long
+		Aggregation: Aggregatable
+		Synchronization: IN_SYNC
+		Collecting: Enabled
+		Distributing: Enabled
+		Defaulted: False
+		Expired: False
+
+	Partner System Priority: 0x0000
+	Partner System: 00-04-96-CD-75-1B
+	Partner Operational Key: 0x03E9
+	Partner Port Priority: 0x0000
+	Partner Port: 0x03E9
+	Partner State: 
+		LACP activity: Active
+		LACP timeout: Long
+		Aggregation: Aggregatable
+		Synchronization: IN_SYNC
+		Collecting: Enabled
+		Distributing: Enabled
+		Defaulted: False
+		Expired: False
+
+	Received LACPDUs: 9275
+	Transmitted LACPDUs: 9274
+	Received marker PDUs: 0
+	Transmitted marker PDUs: 0
+	Received marker response PDUs: 0
+	Transmitted marker response PDUs: 0
+	Received unknown PDUs: 0
+	Received illegal PDUs: 0

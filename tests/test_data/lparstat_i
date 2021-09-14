@@ -1,0 +1,44 @@
+Node Name                                  : oracle1
+Partition Name                             : Oracle-1
+Partition Number                           : 1
+Type                                       : Shared-SMT-4
+Mode                                       : Uncapped
+Entitled Capacity                          : 8.00
+Partition Group-ID                         : 32769
+Shared Pool ID                             : 0
+Online Virtual CPUs                        : 9
+Maximum Virtual CPUs                       : 16
+Minimum Virtual CPUs                       : 1
+Online Memory                              : 921600 MB
+Maximum Memory                             : 921600 MB
+Minimum Memory                             : 1024 MB
+Variable Capacity Weight                   : 128
+Minimum Capacity                           : 0.05
+Maximum Capacity                           : 16.00
+Capacity Increment                         : 0.01
+Maximum Physical CPUs in system            : 16
+Active Physical CPUs in system             : 16
+Active CPUs in Pool                        : 16
+Shared Physical CPUs in system             : 16
+Maximum Capacity of Pool                   : 1600
+Entitled Capacity of Pool                  : 1600
+Unallocated Capacity                       : 0.00
+Physical CPU Percentage                    : 88.89%
+Unallocated Weight                         : 0
+Memory Mode                                : Dedicated
+Total I/O Memory Entitlement               : -
+Variable Memory Capacity Weight            : -
+Memory Pool ID                             : -
+Physical Memory in the Pool                : -
+Hypervisor Page Size                       : -
+Unallocated Variable Memory Capacity Weight: -
+Unallocated I/O Memory entitlement         : -
+Memory Group ID of LPAR                    : -
+Desired Virtual CPUs                       : 9
+Desired Memory                             : 921600 MB
+Desired Variable Capacity Weight           : 128
+Desired Capacity                           : 8.00
+Target Memory Expansion Factor             : -
+Target Memory Expansion Size               : -
+Power Saving Mode                          : Dynamic Power Savings (Favor Performance)
+Sub Processor Mode                         : -

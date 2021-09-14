@@ -1,0 +1,115 @@
+-------------------------------------------------------------
+ETHERNET STATISTICS (en18) :
+Device Type: Virtual I/O Ethernet Adapter (l-lan)
+Hardware Address: de:fb:35:79:21:02
+Elapsed Time: 3 days 5 hours 15 minutes 41 seconds
+
+Transmit Statistics:                          Receive Statistics:
+--------------------                          -------------------
+Packets: 62580431                             Packets: 81684846
+Bytes: 85978411810                            Bytes: 225230719246
+Interrupts: 0                                 Interrupts: 71373617
+Transmit Errors: 0                            Receive Errors: 0
+Packets Dropped: 0                            Packets Dropped: 0
+                                              Bad Packets: 0
+Max Packets on S/W Transmit Queue: 0         
+S/W Transmit Queue Overflow: 0
+Current S/W+H/W Transmit Queue Length: 0
+
+Broadcast Packets: 255                        Broadcast Packets: 265
+Multicast Packets: 2545                       Multicast Packets: 2581
+No Carrier Sense: 0                           CRC Errors: 0
+DMA Underrun: 0                               DMA Overrun: 0
+Lost CTS Errors: 0                            Alignment Errors: 0
+Max Collision Errors: 0                       No Resource Errors: 0
+Late Collision Errors: 0                      Receive Collision Errors: 0
+Deferred: 0                                   Packet Too Short Errors: 0
+SQE Test: 0                                   Packet Too Long Errors: 0
+Timeout Errors: 0                             Packets Discarded by Adapter: 0
+Single Collision Count: 0                     Receiver Start Count: 0
+Multiple Collision Count: 0
+Current HW Transmit Queue Length: 0
+
+General Statistics:
+-------------------
+No mbuf Errors: 0
+Adapter Reset Count: 0
+Adapter Data Rate: 20000
+Driver Flags: Up Broadcast Running 
+	Simplex 64BitSupport LargeSend 
+	DataRateSet VIOENT IPV6_LSO 
+
+Virtual I/O Ethernet Adapter (l-lan) Specific Statistics:
+---------------------------------------------------------
+RQ Length: 10689
+Trunk Adapter: False
+Filter MCast Mode: False
+Filters: 255
+  Enabled: 3  Queued: 0  Overflow: 0
+LAN State: Operational
+
+LPAR Active Memory Sharing: Disabled
+
+Hypervisor Send Failures: 0
+  Receiver Failures: 0
+  Send Errors: 0
+Hypervisor Receive Failures: 0
+
+Invalid VLAN ID Packets: 0
+
+ILLAN Attributes: 000000000002B000 [000000000002A000]
+
+Port VLAN ID:    10
+VLAN Tag IDs:  None
+
+
+Switch ID: ETHERNET0
+
+Hypervisor Information  
+  Virtual Memory        
+    Total (KB)                176
+  I/O Memory            
+    VRM Minimum (KB)          196
+    VRM Desired (KB)          196
+    DMA Max Min (KB)          256
+
+Transmit Information    
+  Transmit Buffers       
+    Buffer Size             65536
+    Buffers                    32
+    History             
+      No Buffers                0
+  Virtual Memory        
+    Total (KB)               2048
+  I/O Memory            
+    VRM Minimum (KB)         2176
+    VRM Desired (KB)        16384
+    DMA Max Min (KB)        16384
+
+Receive Information     
+  Receive Buffers        
+    Buffer Type              Tiny    Small   Medium    Large     Huge
+    Min Buffers              4096     4096     2048      256      128
+    Max Buffers              4096     4096     2048      256      128
+    Allocated                4096     4096     2048      256      128
+    Registered               4096     4096     2048      256      128
+    History             
+      Max Allocated          4096     4096     2048      256      128
+      Lowest Registered      4095     4066     1913      256      128
+  Virtual Memory        
+    Minimum (KB)             2048     8192    32768     8192     8192
+    Maximum (KB)             2048     8192    32768     8192     8192
+  I/O Memory            
+    VRM Minimum (KB)        32768    32768    40960     9216     8704
+    VRM Desired (KB)        32768    32768    40960     9216     8704
+    DMA Max Min (KB)        32768    32768    65536    16384    16384
+  Buffer Mode: Max Min
+  Platform Large Send Offload: Disabled
+  Platform Large Send Packets Transmitted: 0
+  Total Large Send Packets Transmitted: 0
+  Platform Large Send Packets Dropped: 0
+
+I/O Memory Information  
+  Total VRM Minimum (KB)   126788
+  Total VRM Desired (KB)   140996
+  Total DMA Max Min (KB)   180480
