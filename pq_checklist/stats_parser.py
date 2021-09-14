@@ -60,7 +60,8 @@ class StatsParser() :
     '''
     ret = None
     if not parse_function :
-      parse_function = self.functions[command_id]
+      if command_id in self.functions :
+        parse_function = self.functions[command_id]
 
     cmd_out = get_command_output(command        =self.commands[command_id],
                                  cwd            = self.cwd,
