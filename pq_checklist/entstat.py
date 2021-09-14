@@ -10,44 +10,51 @@ import csv, datetime
 from .stats_parser import StatsParser
 
 class parser(StatsParser) :
-  def __init__(self, logger = None, ansible_module = None, cwd = '/tmp', preserv_stats = False) :
+  def __init__(self, logger = None, ansible_module = None, cwd = '/tmp', bos_info = None):
     '''
     '''
     super().__init__()
-    self.preserv_stats  = preserv_stats
-    self.commands = {
-        'stats_general' : "netstat -s"
-        'stats_sockets' : "netstat -aon"
+    self.bos_info = bos_info
+    self.commands = { }
+    self.functions = { }
 
-        }
-    self.functions = {
-        'stats_general' : self.parse_netstat_s
-        }
-
-    # Internal list to hold all keys used when parsing lparstat data
-    self.__stats_keys__ = []
+    self.data = { 'stats' : {} }
 
     return(None)
 
 
-  def get_latest_measurements(self, elements = [ 'stats_general' ], consolidate_function = avg_list, use_existent:bool=True) :
-    if not use_existent or len(self.__stats_keys__) < 1 :
-      self.collect(elements = elements)
 
-    data = self.collect(elements = elements)
-    to_be_added = {'measurement' : 'lparstat', 'tags' : { 'host' : self.data['info']['node_name'] }, 'fields' : { 'time' : int(datetime.datetime.now().timestamp()) } }
-    for key in self.data['stats'].keys() :
-      to_be_added['fields'][key] = consolidate_function(self.data['stats'][key])
+  def update_commands(self, collect=False) :
+    '''
+    Update commands and functions dict
+    '''
+    # In case device list is empty, populate it
+    if len(self.bos_info['dev_class']) == 0 :
+      self.bos_info.collect()
 
-    return(to_be_added)
+    # In case self.commands and self.functions hasn't been populated yet
+    for dev in self.bos_info['dev_class']['if'] :
+      key = 'stats_%s'%dev
+      self.commands[key] = "entstat -d %s"%dev
+      self.functions[key] = self.parse_entstat_d
+    for dev in self.bos_info['dev_class']['adapter'] :
+      if 'ent' in dev :
+        key = 'stats_%s'%dev
+        self.commands[key] = "entstat -d %s"%dev
+        self.functions[key] = self.parse_entstat_d
+    if collect :
+      self.collect(elements = list(self.commands.keys()))
+    return(None)
 
 
-  def parse_netstat_s(self, data:list) :
+
+  def parse_entstat_d(self, data:list) :
     try :
-      self.data['stats_general'] = self.parse_net_v_stat_stats(data, has_paragraphs=True)
+      self.data['stats'].update(self.parse_entstat_stats(data))
+
     except Exception as e:
       debug_post_msg(self.logger, 'Error parsing info : %s'%e, err=True)
-    return(self.data['stats_general'])
+    return(self.data['stats'])
 
 
 #######################################################################################################################
