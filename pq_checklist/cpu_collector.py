@@ -1,6 +1,7 @@
 from . import debug_post_msg, get_command_output, avg_list
 from .lparstat import parser as lparstat_parser
 from .mpstat import parser as mpstat_parser
+from .bos_info import bos as bos_info
 
 import concurrent.futures
 from datetime import datetime
@@ -139,7 +140,8 @@ class collector :
     st = time()
     self.update_data()
     ret = [ i.get_latest_measurements() for i in [ self.lparstat_parser, self.mpstat_parser ] ]
-    duration = time() - st
-    debug_post_msg(self.logger,'CPU Collect Task Duration: %d seconds'%int(duration), err= False)
+    if debug :
+      duration = time() - st
+      debug_post_msg(self.logger,'CPU Collect Task Duration: %d seconds'%int(duration), err= False)
 
     return(ret)

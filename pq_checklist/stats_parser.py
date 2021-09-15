@@ -42,6 +42,9 @@ class StatsParser() :
     return(ret)
 
   def keys(self) :
+    '''
+    Return keys within data directory
+    '''
     return(self.data.keys())
 
 
@@ -112,11 +115,12 @@ class StatsParser() :
     return(ret)
 
 #######################################################################################################################
-  def parse_entstat_stats(self,data:list) -> dict :
+  def parse_entstat_stats(self,data:list, only_numeric:bool=True) -> dict :
     '''
     Parse entstat like files
     Parameters :
       data -> list : list with all lines of entstat contents
+      only_numeric -> bool : [True,False] Add only numeric values into the return dict
 
     Returns:
       dict with entstat contents
@@ -214,16 +218,17 @@ class StatsParser() :
                 lacp_key_index = 1
               if not any([ v in ln for v in ( "Partner", "Actor" ) ]) :
                 for k,v in zip(key,val) :
-                  try :
-                    ret[cur_ent][inner_key][append_prefix[inner_key][lacp_key_index]][k] = v
-                  except :
-                    ret[cur_ent][inner_key][append_prefix[inner_key][lacp_key_index]] = { k : v }
+                  if v != '' or ( only_numeric and not isinstance(v, str) ):
+                    try :
+                      ret[cur_ent][inner_key][append_prefix[inner_key][lacp_key_index]][k] = v
+                    except :
+                      ret[cur_ent][inner_key][append_prefix[inner_key][lacp_key_index]] = { k : v }
                 key,val = [],[]
 
         # Populate return dict
         for k,v in zip(key,val) :
-          if v != '' :
-            if inner_key != '' :
+          if len(k) > 0 and ((not only_numeric and len(v) > 0) or ( only_numeric and isinstance(v, (int, float, complex)) and not isinstance(v, bool))) :
+            if len(inner_key) > 0 :
               try :
                 ret[cur_ent][inner_key][k] = v
               except :

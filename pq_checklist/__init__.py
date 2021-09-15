@@ -295,7 +295,7 @@ def get_config(log_start=False, default_config_file='pq_checklist.conf') :
     logger = pq_logger(log_level = log_level, stdout = False, name = 'pq_checklist', to_dev_log = to_dev_log, dst_file = log_file)
 
     if log_start :
-      debug_post_msg(logger, 'Using config file: %s'%new_config_path, screen_only=True, flush=True)
+      debug_post_msg(logger, 'Using config file: %s'%config_path, screen_only=True, flush=True)
 
   return(config,logger)
 
@@ -306,10 +306,10 @@ def main() -> int:
   Entry point for the checklist program
   '''
   config,logger = get_config(log_start=True)
-  if config['MODE'] == 'ansible' :
+  if config['MODE']['mode'] == 'ansible' :
     from .ansible_collector import loop
     loop()
-  elif config['MODE'] == 'local' :
+  elif config['MODE']['mode'] == 'local' :
     from .local_collector import loop
     loop()
   return(0)

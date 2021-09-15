@@ -3,6 +3,7 @@ url = <influxdb_url>
 token = <influxdb_token>
 org = <influxdb_org>
 bucket = <influxdb_bucket>
+dump_file = /tmp/influx_queries.json
 
 [ANSIBLE]
 host_target = <host target when running on ansible mode>
