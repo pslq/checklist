@@ -13,6 +13,10 @@ host_target = <host target when running on ansible mode>
 #  run as local collector to push data about local server into influxdb
 # possble modes: local, ansible
 mode = local
+# Along with performance stats run simple health check tests into the system
+# The tests results will be logged into syslog
+# Possible values: True or False
+healthcheck = True
 
 [LOOP]
 # Interval between the collections
@@ -46,3 +50,14 @@ other_warnings     = True
 involuntarycontextswitch_ratio     = 30 
 # Ratio to issue a warning of ilcs against vlcs ( only when running on shared core mode )
 involuntarycorecontextswitch_ratio = 10
+
+[ORACLE]
+conn_type = local
+ora_user = oracle
+ora_home = /oracle/database/dbhome_1
+ora_sid  = tasy21
+ora_pass = <secret>
+ora_dsn  = host/service
+asm_user = oracle
+asm_home = /oracle/grid
+asm_sid  = +ASM1

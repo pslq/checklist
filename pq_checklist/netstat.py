@@ -40,7 +40,7 @@ class parser(StatsParser) :
     try :
       self.data['stats_general'] = self.parse_net_v_stat_stats(data, has_paragraphs=True)
     except Exception as e:
-      debug_post_msg(self.logger, 'Error parsing info : %s'%e, err=True)
+      debug_post_msg(self.logger, 'Error parsing info : %s'%e)
     return(self.data['stats_general'])
 
 

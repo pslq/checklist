@@ -111,7 +111,7 @@ class StatsParser() :
         if parse_function :
           ret = parse_function(ret)
     except Exception as e :
-      debug_post_msg(self.logger, 'Error opening %s : %s'%(filename,e), err=True)
+      debug_post_msg(self.logger, 'Error opening %s : %s'%(filename,e))
     return(ret)
 
 #######################################################################################################################
@@ -134,7 +134,8 @@ class StatsParser() :
         'Statistics for every adapter in the IEEE 802.3ad Link Aggregation' : 'general_lacp',
         "IEEE 802.3ad Port Statistics" : "lacp_port_stats",
         'Device Statistics' : 'dev_stats',
-        "Additional Statistics" : 'addon_stats'
+        "Additional Statistics" : 'addon_stats',
+        "Virtual I/O Ethernet Adapter (l-lan) Specific Statistics:" : 'veth_stats'
         }
     append_prefix = {
         'transmit_stats' : [ 'transmit', 'receive' ],
@@ -142,7 +143,8 @@ class StatsParser() :
         'general_lacp' : [],
         "lacp_port_stats" : [ "actor_state", "partner_state"],
         'dev_stats' : [],
-        'addon_stats' : []
+        'addon_stats' : [],
+        'veth_stats' : []
         }
 
     # Small function to cleanup the string that wull be used as key
@@ -240,7 +242,7 @@ class StatsParser() :
                 ret[cur_ent] = { k : v }
 
     except Exception as e :
-      debug_post_msg(self.logger, 'Error in parse_entstat_stats : %s'%e, err=True)
+      debug_post_msg(self.logger, 'Error in parse_entstat_stats : %s'%e)
     return(ret)
 #######################################################################################################################
   def parse_net_v_stat_stats(self, data:list, has_paragraphs:bool=True) -> dict:
@@ -309,7 +311,7 @@ class StatsParser() :
                 except :
                   ret[keys[p]] = [ val ]
     except Exception as e :
-      debug_post_msg(self.logger, 'Error during parse_sar_stats: %s'%e, err=True)
+      debug_post_msg(self.logger, 'Error during parse_sar_stats: %s'%e)
     return(ret,keys)
 
 #######################################################################################################################

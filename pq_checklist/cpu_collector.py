@@ -107,20 +107,20 @@ class collector :
             'High CPU utilization detected along with possible cpu starvation of the lpar, due high cs vs ics ratio, values : %f %f'%(cur_cpu_utilization,involuntarycontextswitch_ratio),
             err= False)
       else :
-        debug_post_msg(self.logger,'High CPU utilization detected, values : %f'%(cur_cpu_utilization), err= False)
+        debug_post_msg(self.logger,'High CPU utilization detected, values : %f'%(cur_cpu_utilization))
     elif self.cpu_min_usage_warn != -1 and cur_cpu_utilization <= self.cpu_min_usage_warn :
-      debug_post_msg(self.logger,'LOW CPU utilization detected, values : %f'%(cur_cpu_utilization), err= False)
+      debug_post_msg(self.logger,'LOW CPU utilization detected, values : %f'%(cur_cpu_utilization))
 
     if self.rq_relative_100pct != -1 :
       _, thread_count = self.get_smtlevel()
       actual_rq = avg_list(self.mpstat_parser.data['stats']['rq'])
       if actual_rq / thread_count > self.rq_relative_100pct :
-        debug_post_msg(self.logger,'High run queue detected on the server, value %f'%(actual_rq), err= False)
+        debug_post_msg(self.logger,'High run queue detected on the server, value %f'%(actual_rq))
 
     if 'app' in self.lparstat_parser.data['stats'].keys() :
       actual_app = avg_list(self.lparstat_parser.data['stats']['app'])
       if actual_app <= self.min_core_pool_warn and self.min_core_pool_warn != -1 :
-        debug_post_msg(self.logger,'Shared processor pool near its capacity limit, value %f'%(actual_app), err= False)
+        debug_post_msg(self.logger,'Shared processor pool near its capacity limit, value %f'%(actual_app))
 
     return(None)
 
@@ -142,6 +142,6 @@ class collector :
     ret = [ i.get_latest_measurements() for i in [ self.lparstat_parser, self.mpstat_parser ] ]
     if debug :
       duration = time() - st
-      debug_post_msg(self.logger,'CPU Collect Task Duration: %d seconds'%int(duration), err= False)
+      debug_post_msg(self.logger,'CPU Collect Task Duration: %d seconds'%int(duration))
 
     return(ret)

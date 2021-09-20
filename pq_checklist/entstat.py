@@ -61,7 +61,7 @@ class parser(StatsParser) :
       self.data['stats'].update(self.parse_entstat_stats(data))
 
     except Exception as e:
-      debug_post_msg(self.logger, 'Error parsing info : %s'%e, err=True)
+      debug_post_msg(self.logger, 'Error parsing info : %s'%e)
     return(self.data['stats'])
 
 

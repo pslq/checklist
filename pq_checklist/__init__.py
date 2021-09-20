@@ -12,12 +12,9 @@ def pq_logger(log_level:int=10, stdout:bool=False, name:str=__name__, to_dev_log
     if os.path.exists(os.path.dirname(dst_file)) :
       logger.addHandler(logging.handlers.RotatingFileHandler(dst_file, maxBytes=10485760, backupCount=90))
     else :
-      debug_post_msg(None, 'Error when trying to use %s as logfile'%dst_file, err=True, screen_only=True, flush=True)
+      debug_post_msg(None, 'Error when trying to use %s as logfile'%dst_file, screen_only=True, flush=True)
   if stdout == True :
     logger.addHandler(logging.StreamHandler())
-
-  logger.setLevel(log_level)
-
 
   if to_dev_log :
     if os.path.exists('/dev/log') :
@@ -27,11 +24,17 @@ def pq_logger(log_level:int=10, stdout:bool=False, name:str=__name__, to_dev_log
       from systemd import journal
       logger.addHandler(journal.JournalHandler())
 
+  ch = logging.StreamHandler()
+  ch.setLevel(log_level)
+  formatter = logging.Formatter('%(name)s - %(message)s')
+  ch.setFormatter(formatter)
+  logger.addHandler(ch)
+
   return(logger)
 
 #######################################################################################################################
-def debug_post_msg(logger, msg:str, err:bool=False, screen_only:bool=False, no_screen:bool = False, \
-                   end:str='\n', flush:bool=False, raise_type:bool=None) -> None:
+def debug_post_msg(logger, msg:str, screen_only:bool=False, no_screen:bool = False, end:str='\n', \
+                           flush:bool=False, raise_type=None) -> None:
   '''
   Parameters :
     logger      = pq_logger class or None
@@ -52,12 +55,17 @@ def debug_post_msg(logger, msg:str, err:bool=False, screen_only:bool=False, no_s
   from sys import stderr as sys_stderr
   from sys import stdout as sys_stdout
 
-  if msg :
+  try :
     if logger and not screen_only :
-      if err :
+      cur_level = logger.getEffectiveLevel()
+      if   cur_level >= 40 :
         logger.error(msg)
-      else :
+      elif cur_level >= 30 :
+        logger.warning(msg)
+      elif cur_level >= 20 :
         logger.info(msg)
+      elif cur_level >= 10 :
+        logger.debug(msg)
 
     if no_screen :
       if err == True :
@@ -69,6 +77,8 @@ def debug_post_msg(logger, msg:str, err:bool=False, screen_only:bool=False, no_s
 
     if raise_type :
       raise raise_type(msg)
+  except Exception as e:
+    raise Exception(e)
   return(None)
 
 
@@ -181,13 +191,13 @@ def get_command_output(command=None, cwd=None, pq_logger = None, shell=False, ti
             ansible_module.fail_json(msg='Error Running command: %s'%command_string, rc=rc, stdout=stdout, stderr=stderr)
 
         except Exception as e :
-          debug_post_msg(pq_logger, "Error when run : %s : msg : %s"%(command_string,e), err=True)
+          debug_post_msg(pq_logger, "Error when run : %s : msg : %s"%(command_string,e))
       else :
         try :
           out = sp.run(command_list, capture_output=True, shell=shell, cwd=cwd, timeout=timeout, env=default_env)
           ret = { 'stdout' : out.stdout.decode().split('\n'), 'stderr' : out.stderr.decode().split('\n'), 'retcode' : out.returncode }
         except Exception as e :
-          debug_post_msg(pq_logger, "Error when run : %s : msg : %s"%(command_string,e), err=True)
+          debug_post_msg(pq_logger, "Error when run : %s : msg : %s"%(command_string,e))
   return(ret)
 
 

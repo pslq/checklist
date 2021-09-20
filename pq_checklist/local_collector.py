@@ -26,25 +26,20 @@ class collector :
     self.rundir = '/tmp'
     self.config = config
     self.logger = logger
-
-    # Load influxdb connection directives
-    if importlib.util.find_spec('influxdb_client') is not None and self.config['INFLUXDB']['url'] != "<influxdb_url>" and len(self.config['INFLUXDB']['url']) > 0 :
-      from influxdb_client import InfluxDBClient, Point, WritePrecision
-      try :
-        self.db = InfluxDBClient(**dict(config.items('INFLUXDB')))
-        self.db_write_api = self.db.write_api()
-      except Exception as e :
-        self.db, self.db_write_api = None, None
-        debug_post_msg(self.logger,'Error connecting to influxDB: %s'%e, err= True)
-    else :
-      self.db, self.db_write_api = None, None
-      debug_post_msg(self.logger,'InfluxDB not configured or influxdb_client not installed, queries will be saved at dumpfile', err=True)
+    self.write_to_dump = False
+    self.healthcheck = False
 
     # Load collectors
     self.net_collector = net_collector.collector(config = config, logger = logger)
     self.cpu_collector = cpu_collector.collector(config = config, logger = logger)
     self.collectors    = ( self.net_collector, self.cpu_collector )
-    debug_post_msg(self.logger,'Starting local collector', err= False)
+
+    # Check if we do healthchecks
+    if "healthcheck" in self.config['MODE'] :
+      if self.config['MODE']['healthcheck'].lower().strip() == 'true' :
+        self.healthcheck = True
+
+    debug_post_msg(self.logger,'Starting local collector')
     return(None)
 
   def __del__(self) :
@@ -56,20 +51,22 @@ class collector :
 
   def collect_all(self, debug=False) :
     from time import time
+    from .db_client import db_client
     st = time()
     data = []
     for measurement_povider in self.collectors :
       data += measurement_povider.get_latest_measurements(debug = debug)
+      if self.healthcheck :
+        try :
+          measurement_povider.health_check()
+        except :
+          pass
 
-    if self.db_write_api :
-      try :
-        self.db_write_api.write(self.config['INFLUXDB']['bucket'],  self.config['INFLUXDB']['org'], data)
-      except Exception as e :
-        debug_post_msg(self.logger, 'Error writing data to influxdb: %s'%e, err=True)
-    if len(self.config['INFLUXDB']['dump_file']) > 0 and ( not self.db_write_api or debug ) :
-      with open(self.config['INFLUXDB']['dump_file'], 'a+') as fptr :
-        fptr.write(json.dumps(data))
+
+    with db_client(self.config,self.logger) as db :
+      db.write(data)
+
     duration = time() - st
-    debug_post_msg(self.logger,'Collect Task Duration: %d seconds'%int(duration), err= False)
+    debug_post_msg(self.logger,'Collect Task Duration: %d seconds'%int(duration))
 
     return(None)

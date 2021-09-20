@@ -63,7 +63,7 @@ class parser(StatsParser) :
             key_value = try_conv_complex(key_value)
         self.data['info'][key_name] = key_value
     except Exception as e:
-      debug_post_msg(self.logger, 'Error parsing info : %s'%e, err=True)
+      debug_post_msg(self.logger, 'Error parsing info : %s'%e)
     return(self.data['info'])
 
   def parse_lparstat_stats(self, data:list) :
