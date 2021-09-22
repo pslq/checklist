@@ -241,12 +241,13 @@ def avg_list(lst:list, ndigits:int=2) :
   return(ret)
 
 #######################################################################################################################
-def get_config(log_start=False, default_config_file='pq_checklist.conf') :
+def get_config(log_start=False, default_config_file='pq_checklist.conf', config_path:str='') :
   '''
   Function to get current logging and configuration parameters
   Parameters :
     log_start           -> [True,False] : write a message at log file, informing which config file is being used
     default_config_file -> str : Default filename used for checklist files
+    config_path         -> str : Specific config file to be loaded ( usefull for debug )
 
   Returns:
     Two variables:
@@ -256,26 +257,27 @@ def get_config(log_start=False, default_config_file='pq_checklist.conf') :
   '''
   import configparser, os.path, shutil, logging, importlib.util
 
-  if importlib.util.find_spec('xdg.BaseDirectory') :
-    import xdg.BaseDirectory
-    search_path = [ xdg.BaseDirectory.xdg_config_home ]
-  elif importlib.util.find_spec('xdg') :
-    import xdg
-    try :
-      search_path = [ str(xdg.XDG_CONFIG_HOME) ]
-    except :
+  if len(config_path) == 0 :
+    if importlib.util.find_spec('xdg.BaseDirectory') :
+      import xdg.BaseDirectory
+      search_path = [ xdg.BaseDirectory.xdg_config_home ]
+    elif importlib.util.find_spec('xdg') :
+      import xdg
+      try :
+        search_path = [ str(xdg.XDG_CONFIG_HOME) ]
+      except :
+        search_path = [ os.getenv('HOME') ]
+    else :
       search_path = [ os.getenv('HOME') ]
-  else :
-    search_path = [ os.getenv('HOME') ]
 
-  search_path = search_path + [ '/etc' , '/opt/freeware/etc' ]
-  config_path = None
+    search_path = search_path + [ '/etc' , '/opt/freeware/etc' ]
+    config_path = None
 
-  for ph in search_path :
-    full_path = os.path.join(ph,default_config_file)
-    if os.path.exists(full_path) :
-      config_path = full_path
-      break
+    for ph in search_path :
+      full_path = os.path.join(ph,default_config_file)
+      if os.path.exists(full_path) :
+        config_path = full_path
+        break
 
   if not config_path :
     new_config_path = os.path.join(search_path[0],default_config_file)
