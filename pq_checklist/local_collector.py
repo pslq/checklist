@@ -1,6 +1,7 @@
-from . import pq_logger, debug_post_msg, conv_bash_var_to_dict, net_collector, cpu_collector
+from . import pq_logger, debug_post_msg, conv_bash_var_to_dict
 import importlib,json
 from datetime import datetime
+from ast import literal_eval
 
 def __pq_main_loop__() :
   from . import get_config
@@ -28,11 +29,19 @@ class collector :
     self.logger = logger
     self.write_to_dump = False
     self.healthcheck = False
+    self.checks_to_perform = literal_eval(self.config['MODE']['collectors'])
 
     # Load collectors
-    self.net_collector = net_collector.collector(config = config, logger = logger)
-    self.cpu_collector = cpu_collector.collector(config = config, logger = logger)
-    self.collectors    = ( self.net_collector, self.cpu_collector )
+    self.collectors = []
+    if 'net' in self.checks_to_perform :
+      from . import net_collector
+      self.collectors.append(net_collector.collector(config = config, logger = logger))
+    if 'cpu' in self.checks_to_perform :
+      from . import cpu_collector
+      self.collectors.append(cpu_collector.collector(config = config, logger = logger))
+    if 'oracle' in self.checks_to_perform :
+      from . import oracle_collector
+      self.collectors.append(oracle_collector.collector(config = config, logger = logger))
 
     # Check if we do healthchecks
     if "healthcheck" in self.config['MODE'] :
