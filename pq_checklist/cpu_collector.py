@@ -54,9 +54,12 @@ class collector :
         executor.submit(i.collect, j)
     return(None)
 
-  def get_smtlevel(self):
+  def get_smtlevel(self, cmd_out:dict = {} ):
     '''
     Get smt level of the server
+
+    Parameters:
+      cmd_out : dict = command output to be parsed as smtctl
 
     Returns:
       int,int
@@ -64,7 +67,8 @@ class collector :
     '''
     now = int(datetime.now().timestamp())
     if now - self.__smtlevel__['latest_read'] > 600 :
-      cmd_out = get_command_output(command='smtctl', cwd=self.cwd, pq_logger = self.logger)
+      if len(cmd_out) == 0 :
+        cmd_out = get_command_output(command='smtctl', cwd=self.cwd, pq_logger = self.logger)
       cpu_count = 0
       thread_count = 0
       if cmd_out['retcode'] == 0 :
@@ -77,12 +81,16 @@ class collector :
     return(self.__smtlevel__['cpu_count'], self.__smtlevel__['thread_count'])
 
 #######################################################################################################################
-  def health_check(self) :
+  def health_check(self, update_data:bool = True) :
     '''
     Send health messages into server's syslog for diag purposes
+
+    Parameters :
+      update_data : bool = Get latest data from the local system before give any measurement
     '''
     # update stored stats
-    self.update_data()
+    if update_data :
+      self.update_data()
 
     # Process mpstat health
     involuntarycontextswitch_ratio     = avg_list(self.mpstat_parser.data['stats']['ics'])/avg_list(self.mpstat_parser.data['stats']['cs'])
@@ -126,19 +134,23 @@ class collector :
 
 
 #######################################################################################################################
-  def get_latest_measurements(self, debug=False) :
+  def get_latest_measurements(self, debug=False, update_data:bool = True) :
     '''
     Get in influxdb format latest cpu utilization measurements from the lpar
 
     Parameters:
       debug : bool -> [True,False] Log into syslog amount of time that took to get the measurements
+      update_data : bool = Get latest data from the local system before give any measurement
+
 
     Returns:
       list of measurements
     '''
     from time import time
     st = time()
-    self.update_data()
+    if update_data :
+      self.update_data()
+
     ret = [ i.get_latest_measurements() for i in [ self.lparstat_parser, self.mpstat_parser ] ]
     if debug :
       duration = time() - st
