@@ -317,13 +317,8 @@ def main() -> int:
   '''
   Entry point for the checklist program
   '''
-  config,logger = get_config(log_start=True)
-  if config['MODE']['mode'] == 'ansible' :
-    from .ansible_collector import loop
-    loop()
-  elif config['MODE']['mode'] == 'local' :
-    from .local_collector import loop
-    loop()
+  from .collector import loop
+  loop()
   return(0)
 
 if __name__ == '__main__' :
