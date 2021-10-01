@@ -28,11 +28,15 @@ class parser(StatsParser) :
 
     return(None)
 
-  def get_latest_measurements(self) :
+  def get_latest_measurements(self, update_data:bool=True) :
     ret = []
-    self.collect()
+    if not update_data or len(self.__stats_keys__) < 1 :
+      self.collect()
+
     for k,v in self.data['stats_general'].items() :
-      ret.append({'measurement' : 'netstat_general', 'tags' : { 'host' : self.bos_info['bos']['hostname'], 'protocol' : k }, 'fields' : { **v,  **{ 'time' : int(datetime.datetime.now().timestamp()) } }})
+      ret.append({'measurement' : 'netstat_general',
+                  'tags' : { 'host' : self.bos_info['bos']['hostname'], 'protocol' : k },
+                  'fields' : { **v,  **{ 'time' : int(datetime.datetime.now().timestamp()) } }})
     return(ret)
 
 

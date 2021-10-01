@@ -46,13 +46,17 @@ class parser(StatsParser) :
       self.collect(elements = list(self.commands.keys()))
     return(None)
 
-  def get_latest_measurements(self) :
+  def get_latest_measurements(self, update_data:bool=True) :
     ret = []
-    self.collect()
+    if not update_data or len(self.__stats_keys__) < 1 :
+      self.collect()
+
     for ent, ent_data in self.data['stats'].items() :
       for tag in ( 'transmit_packets', 'general_stats', 'dev_stats' ) :
         if tag in ent_data :
-          ret.append({'measurement' : 'entstat', 'tags' : { 'host' : self.bos_info['bos']['hostname'], 'stats_type' : tag, 'interface' : ent }, 'fields' : { **ent_data[tag],  **{ 'time' : int(datetime.datetime.now().timestamp()) } }})
+          ret.append({'measurement' : 'entstat',
+                      'tags' : { 'host' : self.bos_info['bos']['hostname'], 'stats_type' : tag, 'interface' : ent },
+                      'fields' : { **ent_data[tag],  **{ 'time' : int(datetime.datetime.now().timestamp()) } }})
     return(ret)
 
 

@@ -33,11 +33,10 @@ class parser(StatsParser) :
     return(None)
 
 
-  def get_latest_measurements(self, elements = [ 'info', 'stats' ], consolidate_function = avg_list, use_existent:bool=True) :
-    if not use_existent or len(self.__stats_keys__) < 1 :
+  def get_latest_measurements(self, elements = [ 'info', 'stats' ], consolidate_function = avg_list, update_data:bool=True) :
+    if not update_data or len(self.__stats_keys__) < 1 :
       self.collect(elements = elements)
 
-    data = self.collect(elements = elements)
     to_be_added = {'measurement' : 'lparstat', 'tags' : { 'host' : self.data['info']['node_name'] }, 'fields' : { 'time' : int(datetime.datetime.now().timestamp()) } }
     for key in self.data['stats'].keys() :
       to_be_added['fields'][key] = consolidate_function(self.data['stats'][key])

@@ -24,8 +24,8 @@ class parser(StatsParser) :
     return(None)
 
 
-  def get_latest_measurements(self, elements = [ 'stats' ], consolidate_function = avg_list, use_existent:bool=True) :
-    if not use_existent or len(self.__stats_keys__) < 1 :
+  def get_latest_measurements(self, elements = [ 'stats' ], consolidate_function = avg_list, update_data:bool=True) :
+    if not update_data or len(self.__stats_keys__) < 1 :
       self.collect(elements = elements)
     if self.bos_data :
       to_be_added = {'measurement' : 'mpstat', 'tags' : { 'host' : self.bos_data['bos']['hostname'] }, 'fields' : { 'time' : int(datetime.datetime.now().timestamp()) } }
