@@ -14,10 +14,22 @@
         path: /usr/lib/boot/unix_64
       register: bos_mp
 
-    - name: mpstat 
+    - name: smtctl_c
+      command: smtctl
+      poll: 02
+      register: smtctl_c
+      when: bos_mp.stat.exists == True
+
+    - name: lsdev_class
+      command: lsdev -C -H -S a -F name:class:subclass:type
+      poll: 02
+      register: lsdev_class
+      when: bos_mp.stat.exists == True
+
+    - name: mpstat_a
       command: mpstat -a 1 2
       poll: 02 
-      register: mpstat
+      register: mpstat_a
       when: bos_mp.stat.exists == True
 
     - name: lparstat_i
@@ -28,14 +40,22 @@
 
     - name: lparstat_s
       command: lparstat 1 2
+      poll: 02 
       register: lparstat_s
       when: bos_mp.stat.exists == True
 
     - name: netstat_s
       command: netstat -s
+      poll: 02 
       register: netstat_s
       when: bos_mp.stat.exists == True
 
     - name: entstat
       entstat:
       register: entstat
+      poll: 02 
+
+    - name: uname_a
+      command: uname -a
+      poll: 02 
+      register: uname_a

@@ -4,11 +4,13 @@
 from __future__ import absolute_import, division, print_function
 from . import get_command_output, debug_post_msg, try_conv_complex, line_cleanup, avg_list
 from collections import defaultdict
+import concurrent.futures
+
 
 
 
 class StatsParser() :
-  def __init__(self, logger = None, ansible_module = None, samples = 2, interval = 1, cwd = '/tmp' ):
+  def __init__(self, logger = None, ansible_module = None, samples = 2, interval = 1, cwd = '/tmp', bos_data = None ):
     '''
     General class with main parsers for stats commands
     '''
@@ -17,48 +19,81 @@ class StatsParser() :
     self.logger         = logger
     self.cwd            = cwd
     self.ansible_module = ansible_module
+    self.bos_data       = bos_data
     self.commands       = {}
     self.functions      = {}
     self.data           = { 'info' : defaultdict(lambda: -1), 'stats' : defaultdict(lambda: -1) }
+    self.file_sources   = {}
+
+    # Internal list to hold all keys used when parsing lparstat data
+    self.__stats_keys__ = []
 
     return(None)
 
+  def __del__(self) :
+    return(None)
+
+  def __exit__(self, exc_type, exc_value, exc_traceback):
+    return(None)
 
 #######################################################################################################################
   def __getitem__(self,key):
     '''
     Return dict like results
     '''
-    ret = None
+    ret = self.data
 
     # Auto update itself in case the key is empty
     if key not in self.data :
-      self.collect()
-    elif len(self.data[key]) == 0 :
-      self.collect()
-
-    if key in self.data.keys() :
+      debug_post_msg(self.logger, '%s not initialized yet, please feed data to it'%__file__, raise_type=Exception)
+    else :
       ret = self.data[key]
     return(ret)
 
+#######################################################################################################################
   def keys(self) :
     '''
     Return keys within data directory
     '''
     return(self.data.keys())
 
+#######################################################################################################################
+  def update_from_dict(self, data:dict) -> None :
+    '''
+    Instead of load data from the local system, parse data gattered through ansible in order to issue measurements
+
+    Parameters:
+      data: dict -> dict of data to be parsed ( output from an ansible playbook )
+
+      Possible keys so far can be found at self.file_sources
+
+    Returns:
+      None
+    '''
+    for element in data :
+      if element['task'] in self.file_sources :
+        self.file_sources[element['task']](element['stdout_lines'])
+
+    return(None)
 
 #######################################################################################################################
-  def collect(self, elements:list = [] ) :
+  def update_from_system(self, elements:list = [] ) :
     '''
     Collect data from the system for specific elements ( objects )
     '''
-    # in case commands dict still not initialized
+    # In case bos still empty
+    try :
+      if len(self.bos_data.data['dev_class']) == 0 :
+        self.bos_data.update_from_system()
+    except :
+      pass
+    # In case commands dict still not initialized
     if len(self.commands.keys()) == 0 and "update_commands" in self.__dir__() :
       self.update_commands()
     # If no element is passed, collect data from all of them
     if len(elements) == 0 :
       elements = [ c for c in self.commands.keys() if c in self.functions ]
+
     for i in elements :
       self.load_from_system(command_id = i)
     return(self.data)
@@ -79,6 +114,8 @@ class StatsParser() :
         retcode -> Return code of the actual command executed, if != 0, the dict ovject might be empty
     '''
     ret = None
+    cmd_out = { 'retcode' : -1 }
+
     if command_id :
       if not parse_function and command_id in self.functions :
         parse_function = self.functions[command_id]
@@ -89,8 +126,37 @@ class StatsParser() :
                                    ansible_module = self.ansible_module)
       if cmd_out['retcode'] == 0 :
         ret = parse_function(cmd_out['stdout'])
+    else :
+      debug_post_msg(self.logger,'Empty command_id, command execution not possible, possible command ids: %s'%(str(self.functions.keys())), raise_type=Exception)
 
     return(ret, cmd_out['retcode'])
+
+#######################################################################################################################
+  def get_latest_measurements(self, debug=False, update_from_system:bool = True) :
+    '''
+    Get in influxdb format latest cpu utilization measurements from the lpar
+
+    Parameters:
+      debug : bool -> [True,False] Log into syslog amount of time that took to get the measurements
+      update_from_system: bool = Get latest data from the local system before give any measurement
+
+
+    Returns:
+      list of measurements
+    '''
+    print('ASASASASASSA')
+    from time import time
+    st = time()
+    if update_from_system:
+      self.update_from_system()
+
+    ret = [ i.get_latest_measurements(update_from_system = update_from_system) for i in self.measurement_providers ]
+    if debug :
+      duration = time() - st
+      debug_post_msg(self.logger,'Collect Task Duration: %d seconds'%int(duration))
+
+    return(ret)
+
 
 
 #######################################################################################################################

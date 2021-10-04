@@ -1,0 +1,1 @@
+select  inst_id, nvl(event,'cpu')event, WAIT_CLASS, count(* ) sample_count from gv$active_session_history where sample_time >= sysdate - PQ_SECONDS_MONITOR/24 group by inst_id , event,wait_class order by 4;

@@ -1,21 +1,21 @@
 #!/opt/freeware/bin/python3
 
 # All imports used
-from . import debug_post_msg, try_conv_complex, avg_list
-import csv, datetime
+from . import debug_post_msg, try_conv_complex, avg_list, line_cleanup
+import datetime
 from collections import defaultdict
 
 
 
 # All imports used
-from .stats_parser import StatsParser
+from .Stats_Parser import StatsParser
 
 class parser(StatsParser) :
-  def __init__(self, logger = None, ansible_module = None, samples = 2, interval = 1, cwd = '/tmp', preserv_stats = False) :
+  def __init__(self, logger = None, ansible_module = None, samples = 2, interval = 1, cwd = '/tmp', bos_data = None) :
     '''
     '''
-    super().__init__()
-    self.preserv_stats  = preserv_stats
+    super().__init__(logger = logger, ansible_module = ansible_module, cwd = cwd)
+    self.bos_data = bos_data
     self.commands = {
         'info' : "lparstat -i",
         'stats' : "lparstat %d %d"%(self.interval, self.samples)
@@ -27,15 +27,17 @@ class parser(StatsParser) :
 
     self.data = { 'info' : {}, 'stats' : {} }
 
-    # Internal list to hold all keys used when parsing lparstat data
-    self.__stats_keys__ = []
+    self.file_sources = {
+        'lparstat_i' : self.parse_lparstat_i,
+        'lparstat_s' : self.parse_lparstat_stats,
+        }
 
     return(None)
 
-
-  def get_latest_measurements(self, elements = [ 'info', 'stats' ], consolidate_function = avg_list, update_data:bool=True) :
-    if not update_data or len(self.__stats_keys__) < 1 :
-      self.collect(elements = elements)
+#######################################################################################################################
+  def get_measurements(self, elements = [ 'info', 'stats' ], consolidate_function = avg_list, update_from_system:bool=True) :
+    if update_from_system or len(self.__stats_keys__) < 1 :
+      self.update_from_system(elements = elements)
 
     to_be_added = {'measurement' : 'lparstat', 'tags' : { 'host' : self.data['info']['node_name'] }, 'fields' : { 'time' : int(datetime.datetime.now().timestamp()) } }
     for key in self.data['stats'].keys() :
@@ -43,10 +45,16 @@ class parser(StatsParser) :
 
     return(to_be_added)
 
-
+#######################################################################################################################
   def parse_lparstat_i(self, data:list) :
-    try :
-      for dt in csv.reader(data, delimiter=':') :
+    lns = []
+    for dt in data :
+      if dt.count('\n') > 1 :
+        lns += dt.split('\n')
+      else :
+        lns += [ dt ]
+    for dt in line_cleanup(lns, split=True, delimiter=':', cleanup=True, remove_endln=True) :
+      if len(dt) == 2 :
         key_name = dt[0].lower().strip(' ').replace(' ', '_').replace('/', '_')
         key_value = dt[1].lower().strip(' ').replace(',','.').replace('%','')
         if key_value[-2:].upper() == "MB" :
@@ -61,18 +69,11 @@ class parser(StatsParser) :
           else :
             key_value = try_conv_complex(key_value)
         self.data['info'][key_name] = key_value
-    except Exception as e:
-      debug_post_msg(self.logger, 'Error parsing info : %s'%e)
     return(self.data['info'])
 
+#######################################################################################################################
   def parse_lparstat_stats(self, data:list) :
-    if not self.preserv_stats :
-      if len(self.__stats_keys__) > 0 :
-        for k in self.data['stats'].keys() :
-          self.data['stats'][k] = []
-
     self.data['stats'],self.__stats_keys__ = self.parse_sar_stats(data, key_heading='%user', specific_reading={})
-
     return(self.data['stats'])
 
 #######################################################################################################################

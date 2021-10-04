@@ -116,12 +116,16 @@ def playbook_runner(playbook = None, host_limit = None, private_data_dir:str = '
     for ro in ret['runner'].events :
       if ro['event'] == 'runner_on_ok' :
         if ro['event_data']['task'] in wanted_outputs or len(wanted_outputs) == 0 :
+          expected_keys = [ 'stdout_lines' ]
+          if ro['event_data']['task']  in output_specific_data.keys() :
+            expected_keys += output_specific_data[ro['event_data']['task']]
+
           try :
             data = { 'task' : ro['event_data']['task'] , 'rc' : ro['event_data']['res']['rc'], 'end' : ro['event_data']['end'] }
           except :
             data = { 'task' : ro['event_data']['task'] , 'rc' : -1,                            'end' : '' }
 
-          for k in [ 'stdout_lines' ] + [] if ro['event_data']['task'] not in output_specific_data.keys() else output_specific_data[ro['event_data']['task']] :
+          for k in expected_keys :
             try :
               data[k] = ro['event_data']['res'][k]
             except :

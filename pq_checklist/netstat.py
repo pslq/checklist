@@ -7,14 +7,14 @@ import csv, datetime
 
 
 # All imports used
-from .stats_parser import StatsParser
+from .Stats_Parser import StatsParser
 
 class parser(StatsParser) :
-  def __init__(self, logger = None, ansible_module = None, cwd = '/tmp', preserv_stats = False, bos_info = None) :
+  def __init__(self, logger = None, ansible_module = None, cwd = '/tmp', preserv_stats = False, bos_data = None) :
     '''
     '''
-    super().__init__()
-    self.bos_info      = bos_info
+    super().__init__(logger = logger, cwd = cwd, ansible_module = ansible_module)
+    self.bos_data      = bos_data
     self.preserv_stats = preserv_stats
     self.commands      = {
                            'stats_general' : "netstat -s",
@@ -26,16 +26,21 @@ class parser(StatsParser) :
 
     self.data = { 'stats_general' : {} }
 
+    self.file_sources = {
+        'netstat_s' : self.parse_netstat_s,
+    }
+
+
     return(None)
 
-  def get_latest_measurements(self, update_data:bool=True) :
+  def get_measurements(self, update_from_system:bool=True) :
     ret = []
-    if not update_data or len(self.__stats_keys__) < 1 :
-      self.collect()
+    if update_from_system :
+      self.update_from_system()
 
     for k,v in self.data['stats_general'].items() :
       ret.append({'measurement' : 'netstat_general',
-                  'tags' : { 'host' : self.bos_info['bos']['hostname'], 'protocol' : k },
+                  'tags' : { 'host' : self.bos_data['bos']['hostname'], 'protocol' : k },
                   'fields' : { **v,  **{ 'time' : int(datetime.datetime.now().timestamp()) } }})
     return(ret)
 
@@ -44,7 +49,7 @@ class parser(StatsParser) :
     try :
       self.data['stats_general'] = self.parse_net_v_stat_stats(data, has_paragraphs=True)
     except Exception as e:
-      debug_post_msg(self.logger, 'Error parsing info : %s'%e)
+      debug_post_msg(self.logger, 'Error parsing parse_netstat_s : %s'%e)
     return(self.data['stats_general'])
 
 

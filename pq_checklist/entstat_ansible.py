@@ -25,7 +25,7 @@ def main():
   result = {
       'changed' : False,
       'rc' : 0,
-      'stats' : {},
+      'stdout_lines' : {},
       'adapters' : []
       }
 
@@ -43,8 +43,8 @@ def main():
     for adpt in result['adapters'] :
       rc, stdout, stderr = module.run_command("entstat -d %s"%adpt)
       if rc == 0 :
-        result['stats'][adpt] = stdout
-    if len(result['stats']) == 0 :
+        result['stdout_lines'][adpt] = stdout
+    if len(result['stdout_lines']) == 0 :
       result['msg'] = 'No adapter with stats found'
       result['rc'] = -1
   else :

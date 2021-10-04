@@ -7,6 +7,8 @@ dump_file = /tmp/influx_queries.json
 
 [ANSIBLE]
 host_target = <host target when running on ansible mode>
+playbook = getperf.yml
+private_data_dir = ansible
 
 [MODE]
 # Use ansible to collect data from remote servers and push into influxdb, or
@@ -17,6 +19,8 @@ mode = local
 # The tests results will be logged into syslog
 # Possible values: True or False
 healthcheck = True
+# Checks to perform
+collectors = [ 'net', 'cpu', 'oracle' ]
 
 [LOOP]
 # Interval between the collections
@@ -52,12 +56,19 @@ involuntarycontextswitch_ratio     = 30
 involuntarycorecontextswitch_ratio = 10
 
 [ORACLE]
+# If handling local instances
 conn_type = local
-ora_user = oracle
-ora_home = /oracle/database/dbhome_1
-ora_sid  = tasy21
-ora_pass = <secret>
-ora_dsn  = host/service
-asm_user = oracle
-asm_home = /oracle/grid
-asm_sid  = +ASM1
+ora_user  = [ 'oracle', 'oracle' ]
+ora_home  = [ '/oracle/database/dbhome_1', '/oracle/grid' ]
+ora_sid   = [ 'tasy21', '+ASM1' ]
+ora_logon = [ '/ as sysdba', '/ as sysasm' ]
+# If handling remote instances ( cx_Oracle module is required )
+#conn_type = remote
+#ora_user = [ oracle ]
+#ora_pass = [ pass ]
+#ora_dsn  = [ host/service ]
+# 0 = DEFAULT_AUTH
+# 2 = SYSDBA
+# 32768 = SYSASM
+#ora_role = [ 0 ]
+

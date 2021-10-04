@@ -6,23 +6,25 @@ from . import debug_post_msg, try_conv_complex, line_cleanup
 
 
 # All imports used
-from .stats_parser import StatsParser
+from .Stats_Parser import StatsParser
 
 class bos(StatsParser) :
   def __init__(self, logger = None, ansible_module = None, cwd = '/tmp', preserv_stats = False) :
     '''
     Class with Basic OS information
     '''
-    super().__init__()
+    super().__init__(logger = logger, ansible_module= ansible_module, cwd = cwd)
+
     self.preserv_stats  = preserv_stats
     self.commands = {
+        'smtctl_c'    : "smtctl",
         'lsdev_class' : "lsdev -C -H -S a -F name:class:subclass:type",
         'lsdev_loc'   : "lsdev -C -c adapter -F 'name class location physloc'",
         'lscfg'       : "lscfg",
         'oslevel_r'   : "oslevel -s",
         'oslevel_s'   : "oslevel -r",
         'uptime'      : "uptime",
-        'uname'       : "uname -a",
+        'uname_a'     : "uname -a",
         "instfix"     : "instfix -i",
         "lslpp_l"     : "lslpp -l",
         "lslpp_h_bos" : "lslpp -h bos.mp*",
@@ -45,12 +47,21 @@ class bos(StatsParser) :
 
     self.functions = {
         'lsdev_class' : self.parse_lsdev_class,
-        'uname' : self.parse_uname_a
+        'uname_a'     : self.parse_uname_a,
+        'smtctl_c'    : self.parse_smtctl
         }
 
-    self.data = { 'dev' : {}, 'dev_class' : {}, 'bos' : {}  }
+    self.file_sources = {
+        'uname_a' : self.parse_uname_a,
+        'lsdev_class' : self.parse_lsdev_class,
+        'smtctl_c' : self.parse_smtctl
+        }
+
+
+    self.data = { 'dev' : {}, 'dev_class' : {}, 'bos' : {}, 'smt' : {}  }
     return(None)
 
+#######################################################################################################################
   def parse_uname_a(self, data:list) -> dict :
     for l in line_cleanup(data, remove_endln=True, split=True, delimiter=' ') :
       if len(l) > 4 :
@@ -63,6 +74,7 @@ class bos(StatsParser) :
     return(self.data['bos'])
 
 
+#######################################################################################################################
   def parse_lsdev_class(self, data:list) -> dict :
     for l in line_cleanup(data, remove_endln=True, split=True, delimiter=':') :
       if len(l) == 4 :
@@ -77,5 +89,24 @@ class bos(StatsParser) :
             self.data['dev_class'][l[1]] = [ l[0] ]
     return(self.data['dev'])
 
+#######################################################################################################################
+  def parse_smtctl(self, data:list) :
+    '''
+    Get smt level of the server
+
+    Parameters:
+      data : list of lines with contents of smtctl command output
+
+    '''
+    ret = {}
+    thread_count, cpu_count = 0, 0
+
+    for ln in data :
+      if ln.startswith('proc') :
+        sp = ln.split(' ')
+        cpu_count += 1
+        thread_count += int(sp[2])
+    self.data['smt']  = { 'cpu_count' : cpu_count, 'thread_count' : thread_count }
+    return(self.data['smt'])
 #######################################################################################################################
 #######################################################################################################################
