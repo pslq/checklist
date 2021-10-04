@@ -333,15 +333,16 @@ class StatsParser() :
         key,val = 1,0
         if sp[-1].isnumeric() :
           key,val = 0,-1
-        kt = '_'.join([ sp[v] for v in range(key,len(sp)-abs(val)) if not any([ Z in sp[v] for Z in exclude]) ]).lower().replace('.', '').replace(':','')
+        kt = '_'.join([ sp[v] for v in range(key,len(sp)-abs(val)) if not any([ Z in sp[v] for Z in exclude]) ]).lower().replace('.', '').replace(':','').replace(',','')
         vn = try_conv_complex(sp[val])
-        if has_paragraphs :
-          try :
-            ret[cur_key][kt] = vn
-          except :
-            ret[cur_key] = { kt : vn }
-        else :
-          ret[kt] = vn
+        if len(kt) > 0 and len(str(vn)) > 0 :
+          if has_paragraphs :
+            try :
+              ret[cur_key][kt] = vn
+            except :
+              ret[cur_key] = { kt : vn }
+          else :
+            ret[kt] = vn
     return(ret)
 
 #######################################################################################################################
