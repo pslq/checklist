@@ -144,11 +144,16 @@ class Base_collector :
       list of measurements
     '''
     from time import time
+    ret = []
     st = time()
     if update_from_system :
       self.update_from_system()
 
-    ret = [ provider.get_measurements(update_from_system = update_from_system) for provider in self.providers.values() ]
+    for provider in self.providers.values() :
+      try :
+        ret += provider.get_measurements(update_from_system = update_from_system)
+      except :
+        ret += [ provider.get_measurements(update_from_system = update_from_system) ]
 
     if debug :
       duration = time() - st

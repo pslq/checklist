@@ -47,7 +47,7 @@ class parser(StatsParser) :
     for key in tmp_dict.keys() :
       to_be_added['fields'][key] = consolidate_function(tmp_dict[key])
 
-    return(to_be_added)
+    return([to_be_added])
 
 
 #######################################################################################################################

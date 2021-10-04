@@ -43,7 +43,7 @@ class parser(StatsParser) :
     for key in self.data['stats'].keys() :
       to_be_added['fields'][key] = consolidate_function(self.data['stats'][key])
 
-    return(to_be_added)
+    return([to_be_added])
 
 #######################################################################################################################
   def parse_lparstat_i(self, data:list) :

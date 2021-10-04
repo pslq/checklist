@@ -27,7 +27,10 @@ class collector(Base_collector) :
     return(None)
 
 
-  def collect_all(self, debug=False) :
+  def collect_all(self, debug=False) -> None:
+    '''
+    Main function that consolidate all data from collectors
+    '''
     from time import time
     from .db_client import db_client
     st = time()
@@ -42,17 +45,18 @@ class collector(Base_collector) :
       self.update_all_ansible_playbook(debug=debug)
       update_data_on_measurement = False
 
+    # Get all information from hosts defined into the collectors
     for hosts in self.collectors.keys() :
       for measurement_povider in self.collectors[hosts].values() :
         data += measurement_povider.get_latest_measurements(debug = debug, update_from_system=update_data_on_measurement)
+        # Get Health Check routines and send to syslog
         if self.healthcheck :
-          measurement_povider.health_check(update_from_system=update_data_on_measurement)
+          for msg in measurement_povider.health_check(update_from_system=update_data_on_measurement) :
+            debug_post_msg(self.logger,'MGS FROM %s : %s'%(hosts,msg))
 
-    print(data)
-    '''
+    # Write information metrics to influxdb
     with db_client(self.config,self.logger) as db :
       db.write(data)
-    '''
 
     duration = time() - st
     debug_post_msg(self.logger,'Collect Task Duration: %d seconds'%int(duration))
