@@ -3,6 +3,7 @@ url = <influxdb_url>
 token = <influxdb_token>
 org = <influxdb_org>
 bucket = <influxdb_bucket>
+timeout = 50000
 dump_file = /tmp/influx_queries.json
 
 [ANSIBLE]

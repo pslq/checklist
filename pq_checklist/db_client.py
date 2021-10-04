@@ -43,7 +43,7 @@ class db_client() :
     if importlib.util.find_spec('influxdb_client') is not None and self.config['INFLUXDB']['url'] != "<influxdb_url>" and len(self.config['INFLUXDB']['url']) > 0 :
       from influxdb_client import InfluxDBClient, Point, WritePrecision
       try :
-        self.db = InfluxDBClient(**dict(config.items('INFLUXDB')))
+        self.db = InfluxDBClient(**dict(self.config.items('INFLUXDB')))
         self.db_write_api = self.db.write_api()
       except Exception as e :
         debug_post_msg(self.logger,'Error connecting to influxDB: %s'%e)
