@@ -1,9 +1,28 @@
-from . import debug_post_msg
+from . import debug_post_msg, get_config
 import json, importlib
 #######################################################################################################################
 
+def load_file(file_to_load,config_file) :
+  '''
+  main loop that will refresh
+  '''
+  ret = 2
+  if len(config_file) > 0 :
+    config,logger = get_config(log_start=False, config_path=config_file)
+  else :
+    config,logger = get_config(log_start=False)
+
+  with db_client(config,logger) as db :
+    if db.write_from_file(file_to_load) :
+      ret = 0
+
+  return(ret)
+
+
+#######################################################################################################################
+#######################################################################################################################
 class db_client() :
-  def __init__(self, config = None, logger = None, auto_connect:bool=False) :
+  def __init__(self, config = None, logger = None, auto_connect:bool=True) :
     '''
     Class to handle write off data into databases or dump-files
 
@@ -14,25 +33,35 @@ class db_client() :
     '''
     self.config = config
     self.logger = logger
+    self.auto_connect = auto_connect
     self.db, self.db_write_api, self.output_file = None, None, None
 
     if auto_connect :
       self.connect()
     return(None)
 
+#######################################################################################################################
   def __enter__(self) :
-    self.connect()
+    if self.auto_connect :
+      self.connect()
     return(self)
+#######################################################################################################################
 
   def __exit__(self, exc_type, exc_value, exc_traceback):
     self.disconnect()
     return(None)
 
+#######################################################################################################################
   def disconnect(self) :
     if self.output_file :
       self.output_file.close()
+
+    if self.db_write_api :
+      self.db_write_api.close()
+
     return(None)
 
+#######################################################################################################################
   def connect(self) :
     '''
     Connect to the database using directives defined into the config file
@@ -55,7 +84,27 @@ class db_client() :
       debug_post_msg(self.logger,'InfluxDB not configured or influxdb_client not installed, or loglevel set to debug. Queries will be saved at dumpfile')
     return(None)
 
+#######################################################################################################################
+  def write_from_file(self, filename:str) -> bool :
+    '''
+    Load data from file and write into the influxdb
 
+    Parameters :
+      filename : str -> filename to be loaded, in order to write into the InfluxDB
+
+    Returns :
+      bool -> [True,False]
+    '''
+    ret = False
+    try :
+      with open(filename, 'r') as fptr :
+        lst_of_messages = json.load(fptr)
+        ret = self.write(lst_of_messages)
+    except Exception as e :
+      debug_post_msg(self.logger, 'Error writing data from file : %s'%e, raise_type=Exception)
+    return(ret)
+
+#######################################################################################################################
   def write(self,msg:list, dumpfile_only = False, db_only = False) -> bool :
     '''
     Write data into influxdb or dumpfile in order to perform further analysis
@@ -72,7 +121,9 @@ class db_client() :
     try :
       if self.db_write_api and not dumpfile_only :
         try :
-          self.db_write_api.write(self.config['INFLUXDB']['bucket'],  self.config['INFLUXDB']['org'], msg)
+          ret_data = self.db_write_api.write(self.config['INFLUXDB']['bucket'],  self.config['INFLUXDB']['org'], msg)
+          if ret_data :
+            debug_post_msg(self.logger, 'Unexpected from InfluxDB, something weird might be happening: %s'%str(ret_data))
           ret = True
         except Exception as e :
           debug_post_msg(self.logger, 'Error writing data to influxdb: %s'%e, raise_type=Exception)
