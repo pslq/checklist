@@ -310,6 +310,17 @@ def get_config(log_start=False, default_config_file='pq_checklist.conf', config_
 
   return(config,logger)
 
+#######################################################################################################################
+def main_help() :
+  help_text = \
+  """Parameters that can be sent through command line:
+    -h            # Help Message
+    -l <filename> # InfluxDB dumpfile to me loaded ( cannot be used along with -d )
+    -d            # Run collector
+    -c <filename> # Specific config file """
+  print(help_text)
+  return(0)
+
 
 #######################################################################################################################
 def main() -> int:
@@ -317,8 +328,36 @@ def main() -> int:
   Entry point for the checklist program
   '''
   from .general_collector import loop
-  loop()
-  return(0)
+  import sys, getopt
+
+  ret = -1
+  file_to_load = ''
+  config_file = ''
+  run_loop = False
+
+  if len(sys.argv) < 2 :
+    sys.exit(main_help())
+  else :
+    try:
+      opts, args = getopt.getopt(sys.argv[1:],"hl:dc:")
+    except getopt.GetoptError:
+      sys.exit(main_help())
+    for opt, arg in opts:
+      if opt == '-h':
+        sys.exit(main_help())
+      elif opt == "-l" :
+        file_to_load = arg
+      elif opt == "-c" :
+        config_file = arg
+      elif opt == "-d" :
+        run_loop = True
+
+  if run_loop and len(file_to_load) == 0 :
+    ret = loop(config_file)
+  elif len(file_to_load) > 0 :
+    from db_client import load_file as db_client_load_file
+    ret = db_client_load_file(file_to_load,config_file)
+  return(ret)
 
 if __name__ == '__main__' :
   main()
