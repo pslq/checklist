@@ -336,6 +336,9 @@ class StatsParser() :
         kt = '_'.join([ sp[v] for v in range(key,len(sp)-abs(val)) if not any([ Z in sp[v] for Z in exclude]) ]).lower().replace('.', '').replace(':','').replace(',','')
         vn = try_conv_complex(sp[val])
         if len(kt) > 0 and len(str(vn)) > 0 :
+          # Quick fix due the miss behavior of netstat
+          if 'ack' in kt and kt[-1].isalnum() :
+            kt = 'ack_for_bytes'
           if has_paragraphs :
             try :
               ret[cur_key][kt] = vn
