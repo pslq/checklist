@@ -33,10 +33,9 @@ class parser(StatsParser) :
     if update_from_system or len(self.__stats_keys__) < 1 :
       self.update_from_system(elements = elements)
 
+    to_be_added = {'measurement' : 'mpstat', 'tags' : { }, 'fields' : {},  'time' : datetime.datetime.utcnow().isoformat() }
     if self.bos_data :
-      to_be_added = {'measurement' : 'mpstat', 'tags' : { 'host' : self.bos_data['bos']['hostname'] }, 'fields' : { 'time' : int(datetime.datetime.now().timestamp()) } }
-    else :
-      to_be_added = {'measurement' : 'mpstat', 'tags' : { }, 'fields' : { 'time' : int(datetime.datetime.now().timestamp()) } }
+      to_be_added['tags']['host'] = self.bos_data['bos']['hostname']
 
     tmp_dict = self.data['stats']
     # Remove CPU key from return, as it always comes with ALL ALL ALL

@@ -3,24 +3,34 @@ import importlib,json,os
 from datetime import datetime
 from .Base_collector import Base_collector
 
-def __pq_main_loop__() :
-  from . import get_config
-  import time
-  config,logger = get_config(log_start=False)
-  coll_class = collector(config = config, logger = logger)
-  while True :
-    coll_class.collect_all()
-    time.sleep(int(config['LOOP']['interval']))
-
-  return(None)
-
-
-def loop() :
+#######################################################################################################################
+def loop(config_file) :
+  '''
+  main loop that will refresh
+  '''
   from multiprocessing import Process
-  p = Process(target=__pq_main_loop__)
+
+  # Inner function that will run in loop
+  def __pq_main_loop__(config_file) :
+    from . import get_config
+    import time
+    if len(config_file) > 0 :
+      config,logger = get_config(log_start=False, config_path=config_file)
+    else :
+      config,logger = get_config(log_start=False)
+
+    coll_class = collector(config = config, logger = logger)
+    while True :
+      coll_class.collect_all()
+      time.sleep(int(config['LOOP']['interval']))
+    return(None)
+
+  # Main function body
+  p = Process(target=__pq_main_loop__, args=(config_file,))
   p.start()
   return(p)
 
+#######################################################################################################################
 class collector(Base_collector) :
   def __init__(self, config = None, logger = None ) :
     super().__init__(config = config, logger = logger)
@@ -56,7 +66,8 @@ class collector(Base_collector) :
 
     # Write information metrics to influxdb
     with db_client(self.config,self.logger) as db :
-      db.write(data)
+      if not db.write(data) :
+        debug_post_msg(self.logger,'Error when writting data into DB')
 
     duration = time() - st
     debug_post_msg(self.logger,'Collect Task Duration: %d seconds'%int(duration))

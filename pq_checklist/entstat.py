@@ -55,7 +55,9 @@ class parser(StatsParser) :
         if tag in ent_data :
           ret.append({'measurement' : 'entstat',
                       'tags' : { 'host' : self.bos_data['bos']['hostname'], 'stats_type' : tag, 'interface' : ent },
-                      'fields' : { **ent_data[tag],  **{ 'time' : int(datetime.datetime.now().timestamp()) } }})
+                      'fields' : ent_data[tag],
+                      'time' : datetime.datetime.utcnow().isoformat()
+                     })
     return(ret)
 
 

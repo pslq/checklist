@@ -41,7 +41,9 @@ class parser(StatsParser) :
     for k,v in self.data['stats_general'].items() :
       ret.append({'measurement' : 'netstat_general',
                   'tags' : { 'host' : self.bos_data['bos']['hostname'], 'protocol' : k },
-                  'fields' : { **v,  **{ 'time' : int(datetime.datetime.now().timestamp()) } }})
+                  'fields' : v,
+                  'time' : datetime.datetime.utcnow().isoformat()
+                 })
     return(ret)
 
 
@@ -50,6 +52,7 @@ class parser(StatsParser) :
       self.data['stats_general'] = self.parse_net_v_stat_stats(data, has_paragraphs=True)
     except Exception as e:
       debug_post_msg(self.logger, 'Error parsing parse_netstat_s : %s'%e)
+
     return(self.data['stats_general'])
 
 

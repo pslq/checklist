@@ -39,7 +39,7 @@ class parser(StatsParser) :
     if update_from_system or len(self.__stats_keys__) < 1 :
       self.update_from_system(elements = elements)
 
-    to_be_added = {'measurement' : 'lparstat', 'tags' : { 'host' : self.data['info']['node_name'] }, 'fields' : { 'time' : int(datetime.datetime.now().timestamp()) } }
+    to_be_added = {'measurement' : 'lparstat', 'tags' : { 'host' : self.data['info']['node_name'] }, 'fields' : { },  'time' : datetime.datetime.utcnow().isoformat()  }
     for key in self.data['stats'].keys() :
       to_be_added['fields'][key] = consolidate_function(self.data['stats'][key])
 
