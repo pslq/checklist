@@ -37,6 +37,7 @@ class collector(Base_collector) :
     return(None)
 
 
+#######################################################################################################################
   def collect_all(self, debug=False) -> None:
     '''
     Main function that consolidate all data from collectors
@@ -74,6 +75,7 @@ class collector(Base_collector) :
 
     return(None)
 
+#######################################################################################################################
   def update_all_ansible_playbook(self, debug=False) -> dict :
     '''
     Update all collectors within this class using the ansible playbook defined within the config
@@ -106,7 +108,8 @@ class collector(Base_collector) :
     try :
       for host,data in data_from_ansible['results'].items() :
         if host not in self.collectors :
-          self.__load_collectors_for_host__(host)
+          if self.__load_collectors_for_host__(host) :
+            self.__load_collectors_for_host__(self.nodename, local_only=True)
         for check in ( 'cpu', 'net' ) :
           if check in self.checks_to_perform and check in self.collectors[host] :
             self.collectors[host][check].update_from_dict(data)

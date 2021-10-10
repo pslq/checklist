@@ -27,8 +27,6 @@ def __cleanup_artifacts__(private_data_dir:str) -> None :
 
 
 #######################################################################################################################
-#######################################################################################################################
-
 def script_runner(script_name = None, host_target = None, private_data_dir:str = 'playbooks', \
                   quiet:bool = True, cleanup_artifacts:bool = True) -> dict :
   '''
@@ -138,3 +136,52 @@ def playbook_runner(playbook = None, host_limit = None, private_data_dir:str = '
   if cleanup_artifacts :
     __cleanup_artifacts__(private_data_dir)
   return(ret)
+
+#######################################################################################################################
+def ping(host_target = None, private_data_dir:str = 'playbooks', \
+         quiet:bool = True, cleanup_artifacts:bool = True) -> dict :
+  '''
+  Run local scripts on target host group
+
+  Parameters:
+     host_target       : target host group where the script will be executed
+     private_data_dir  : Ansible private dir ( base directory to look for scripts and ansible config
+     quiet -> bool     : [True,False] If run on quiet mode or not
+     cleanup_artifacts : [True,False] Cleanup artifacts after completed
+
+  Returns:
+    dict with contents:
+     { 'runner' : ansible_runner object that was used to execute the script,
+       'results' : dict with host keys and in each key a list of of results
+     }
+  '''
+  ret = { 'results' : {} }
+
+  ret['runner'] = ansible_runner.run(
+    host_pattern=host_target,
+    private_data_dir=private_data_dir,
+    module='script',
+    quiet=quiet,
+    module_args=s
+  )
+  for ro in ret['runner'].events :
+    if ro['event'] == 'runner_on_ok' :
+      try :
+        try :
+          ret['results'][ro['event_data']['host']].append(
+              { 'script_name' : s,
+                'end' : ro['event_data']['end'],
+                'rc' : ro['event_data']['res']['rc']
+              })
+        except :
+          ret['results'][ro['event_data']['host']] = [
+              { 'script_name' : s, 'end' : ro['event_data']['end'],
+                'rc' : ro['event_data']['res']['rc']
+              } ]
+      except :
+        pass
+  if cleanup_artifacts :
+    __cleanup_artifacts__(private_data_dir)
+
+  return(ret)
+

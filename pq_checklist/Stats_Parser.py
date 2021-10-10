@@ -24,6 +24,7 @@ class StatsParser() :
     self.functions      = {}
     self.data           = { 'info' : defaultdict(lambda: -1), 'stats' : defaultdict(lambda: -1) }
     self.file_sources   = {}
+    self.only_on_localhost = False # Load the collector only on localnode
 
     # Internal list to hold all keys used when parsing lparstat data
     self.__stats_keys__ = []
