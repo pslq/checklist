@@ -5,10 +5,9 @@ select
   round(LG.SOFAR*100/LG.TOTALWORK) as PCT,
   mod(trunc(24 * 60 * (SYSDATE - LG.START_TIME)), 60) RUNTIME,
   sql.HASH_VALUE,
+  S.SQL_ID,
   rpad(sql.sql_text, 80) SQL
 from
   GV$SESSION S, GV$SESSION_LONGOPS LG, GV$SQLAREA SQL
 where
   LG.SOFAR < LG.TOTALWORK and S.SID = LG.SID and SQL.SQL_ID = S.SQL_ID
-order by TEMPO_EM_EXEC ASC;
-

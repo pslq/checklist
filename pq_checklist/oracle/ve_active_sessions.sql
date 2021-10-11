@@ -7,6 +7,7 @@ select
   rpad(s.serial#,8) SERIAL,
   s.inst_id,
   sql.HASH_VALUE,
+  s.sql_id,
   sql.sql_text
 FROM
   GV$SESSION S, GV$PROCESS P, AUDIT_ACTIONS A, GV$SQLAREA SQL
