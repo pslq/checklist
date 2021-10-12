@@ -19,9 +19,8 @@ def loop(config_file) :
     else :
       config,logger = get_config(log_start=False)
 
-    coll_class = collector(config = config, logger = logger)
     while True :
-      coll_class.collect_all()
+      collector(config = config, logger = logger).collect_all()
       time.sleep(int(config['LOOP']['interval']))
     return(None)
 
