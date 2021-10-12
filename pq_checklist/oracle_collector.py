@@ -168,11 +168,12 @@ class collector() :
             me[srv] = { inst : { usr : 1 } }
 
         for server,inst in me.items() :
-          for usr,count in inst.items() :
-            ret.append({'measurement' : 'oracle_longops',
-              'tags' : { 'server' : server, 'instance' : inst, 'user' : usr },
-              'fields' : { 'count' : count },
-              'time' : current_time })
+          for instance, users  in inst.items() :
+            for user,count in users.items() :
+              ret.append({'measurement' : 'oracle_longops',
+                'tags' : { 'server' : server, 'instance' : instance, 'user' : user },
+                'fields' : { 'count' : count },
+                'time' : current_time })
 
 
     # Measure wait events

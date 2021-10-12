@@ -51,7 +51,7 @@ class parser(StatsParser) :
       self.update_from_system()
 
     for ent, ent_data in self.data['stats'].items() :
-      for tag in ( 'transmit_packets', 'general_stats', 'dev_stats' ) :
+      for tag in ( 'transmit_stats', 'general_stats', 'dev_stats' ) :
         if tag in ent_data :
           ret.append({'measurement' : 'entstat',
                       'tags' : { 'host' : self.bos_data['bos']['hostname'], 'stats_type' : tag, 'interface' : ent },

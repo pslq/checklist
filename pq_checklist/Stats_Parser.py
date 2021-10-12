@@ -145,7 +145,6 @@ class StatsParser() :
     Returns:
       list of measurements
     '''
-    print('ASASASASASSA')
     from time import time
     st = time()
     if update_from_system:
