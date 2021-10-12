@@ -153,6 +153,28 @@ class collector() :
         return(databases[-1])
 
 
+    # Measure longops
+    for con_seq, longops in queries_with_pending_work.items() :
+      me = {}
+      for lgop in longops :
+        srv,inst,usr = lgop['server'], lgop['inst_name'], lgop['user']
+
+        try :
+          me[srv][inst][usr] += 1
+        except :
+          try :
+            me[srv][inst] = { usr : 1 }
+          except :
+            me[srv] = { inst : { usr : 1 } }
+
+        for server,inst in me.items() :
+          for usr,count in inst.items() :
+            ret.append({'measurement' : 'oracle_longops',
+              'tags' : { 'server' : server, 'instance' : inst, 'user' : usr },
+              'fields' : { 'count' : count },
+              'time' : current_time })
+
+
     # Measure wait events
     for con_seq, events in wait_events.items() :
       for event in events :
