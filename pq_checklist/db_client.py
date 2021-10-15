@@ -84,6 +84,17 @@ class db_client() :
       debug_post_msg(self.logger,'InfluxDB not configured or influxdb_client not installed, or loglevel set to debug. Queries will be saved at dumpfile')
     return(None)
 
+  def delete_measurement(self, measurement,start_date:str='1970-01-01T00:00:00Z', date_end:str='') :
+    import datetime
+    ret = None
+    if self.db :
+      delete_api = self.db.delete_api()
+      if len(date_end) == 0 :
+        date_end = datetime.datetime.utcnow().isoformat()
+      ret = delete_api.delete(start_date, '2020-04-27T00:00:00Z', '_measurement="%s"'%measurement, bucket=self.config['INFLUXDB']['bucket'], org=self.config['INFLUXDB']['org'])
+    return(ret)
+
+
 #######################################################################################################################
   def write_from_file(self, filename:str) -> bool :
     '''

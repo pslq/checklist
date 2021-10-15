@@ -3,9 +3,10 @@
 # All imports used
 from .Stats_Parser import StatsParser
 from .cache import pq_cache
-from . import avg_list, debug_post_msg
+from . import avg_list, debug_post_msg, pq_round_number
 from ast import literal_eval
 import importlib, datetime, os.path, time
+
 
 # echo "select 1 from dual; " | su - oracle -c "export ORACLE_SID=tasy21 ; export ORACLE_HOME=/oracle/database/dbhome_1 ;  /oracle/database/dbhome_1/bin/sqlplus / as sysdba @/tmp/login.sql"
 
@@ -23,13 +24,34 @@ class collector() :
     self.query_dir      = os.path.join(os.path.dirname(os.path.abspath(__file__)),"oracle")
     self.nodename       = os.uname().nodename
 
+    self.ora_users_to_ignore = literal_eval(config['ORACLE']['ora_users_to_ignore']) if 'ora_users_to_ignore' in config['ORACLE'] else []
+    self.check_statistics_days = int(config['ORACLE']['check_statistics_days']) if 'check_statistics_days' in config['ORACLE'] else -1
+
     self.monitor_sample = 200
     self.queries = [ "ve_temp_usage.sql", "ve_active_sessions.sql", "ve_cons_per_user.sql",
                      "ve_with_work.sql",  "ve_wait_event.sql", 've_instance_info.sql',   've_users_with_objets.sql',
-                     "ve_wait_hist.sql", "ve_database_info.sql" ]
+                     "ve_wait_hist.sql", "ve_database_info.sql", "ve_tablespace_usage.sql", "ve_table_frag.sql",
+                     've_indexes.sql', 've_stats_history.sql' ]
+
+    # helper to avoid convert the list to a string that will be used within Oracle multiple times
+    __PQ_NOTOWNERS_str__ = str(self.ora_users_to_ignore).replace('[','').replace(']','')
+
     self.query_replacements = { 've_wait_event.sql' : [ [ 'PQ_SECONDS_MONITOR', self.config['LOOP']['interval'].strip() ] ],
-                                've_wait_hist.sql'  : [ [ 'PQ_SECONDS_MONITOR', self.config['LOOP']['interval'].strip() ] ]
+                                've_wait_hist.sql'  : [ [ 'PQ_SECONDS_MONITOR', self.config['LOOP']['interval'].strip() ] ],
+                                've_indexes.sql'    : [ [ 'PQ_NOTOWNERS', __PQ_NOTOWNERS_str__ ]],
+                                've_table_frag.sql' : [ [ 'PQ_NOTOWNERS', __PQ_NOTOWNERS_str__ ]],
+                                've_stats_history.sql' : [ [ 'PQ_NOTOWNERS', __PQ_NOTOWNERS_str__ ]]
                               }
+
+    self.query_result_sequence = {
+        've_table_frag.sql' : ( 'owner', 'table_name', 'table_size', 'actual_size', 'wasted_space', 'pct_reclaimable' ),
+        've_tablespace_usage.sql' : ( 'tablespace', 'total', 'total_physical_cap', 'free', 'free_pct' ),
+        've_temp_usage.sql' : ( 'tablespace', 'usage' ),
+        've_with_work.sql' : ( 'usr', 'inst_id', 'sid', 'pct', 'runtime', 'hash_value', 'sql_id', 'sqltext'),
+        've_indexes.sql' : ( 'owner','index_name','index_type','table_owner','table_name','table_type','compression','degree','generated','visibility' ),
+        've_stats_history.sql' : ( 'owner', 'table_name', 'stats_update_time', 'modification_time' )
+    }
+
 
     self.query_cache_results = pq_cache(logger = self.logger)
 
@@ -115,19 +137,130 @@ class collector() :
     return(None)
 
 #######################################################################################################################
-  def __get_cache__(self, query_id) :
-    ret = None
-    cur_time = time.time()
-    cache_dt = self.query_cache_results[query_id]
-    if cache_dt :
-      if cache_dt['ts'] - cur_time < 10 :
-        ret = cache_dt['result']
+  def write_ret_into_sqlfile(self,output_dir:str,ret_obj:dict, mode:str='w+') -> bool :
+    '''
+    Write a group of queries into it's sqlfiles
+
+    Parameters :
+      output_dir -> directory into the local system that will hold all files ( one per database )
+      ret_obj    -> object to be written
+      mode       -> write mode to be passed when opening the file ( see open() )
+
+    Returns : bool -> [True,False]
+    '''
+    ret = True
+    if len(output_dir) > 0 :
+      for con_seq,data in ret_obj.items() :
+        db_name = self.database_name(con_seq)
+        for stat,cmds in data.items() :
+          try :
+            with open(os.path.join(output_dir,'%s_%s.sql'%(db_name,stat)), mode) as fptr :
+              for cmd in cmds :
+                try :
+                  fptr.write('%s;\n'%cmd)
+                except Exception as e :
+                  debug_post_msg(self.logger,'Error writting sqlfile : %s'%str(e), raise_type=Exception)
+          except Exception as e :
+            debug_post_msg(self.logger,'Error writting sqlfile : %s'%str(e), raise_type=Exception)
+      else :
+        debug_post_msg(self.logger,'No output_dir defined')
+        ret = False
     return(ret)
 
 #######################################################################################################################
-  def __add_cache__(self, query_id, data) :
+  def load_sqlfile(self, query_file:str, notdefined:bool=False, specific_replacements:list=[]) -> str:
+    '''
+    Load and parse sqlfiles
+    '''
+    # Replace strings if any replacement defined
+    query = ''
+    tgt = None
+
+    # Load query file
+    if query_file in self.queries :
+      tgt = os.path.join(self.query_dir,query_file)
+    elif notdefined :
+      tgt = query_file
+
+    if tgt :
+      try :
+        with open(tgt, 'r') as fptr :
+          query = fptr.read()
+      except Exception as e :
+        debug_post_msg(self.logger,'Error loading sqlfile : %s'%str(e), raise_type=Exception)
+
+    # Replace strings if any replacement defined
+    replacements = specific_replacements
+    if query_file in self.query_replacements.keys() :
+      replacements += self.query_replacements[query_file]
+
+    for r in replacements :
+      query = query.replace(r[0],r[1])
+
+    return(query)
+
+
+#######################################################################################################################
+  def __get_cache__(self, query_id:str, expires:int=10, when_empty=None) :
+    '''
+    Store object into cache, if object is older than what is defined into expires,
+    returns the value defined in when_empty
+
+    Parameters :
+      query_id :str -> Object to be stored ( usually a dict )
+      expires  :int -> amount of seconds that will consider the object valid
+      when_empty : obj -> what to report when nothing in cache or expired object
+
+    Returns :
+      object
+    '''
+    ret = when_empty
     cur_time = time.time()
-    return(self.query_cache_results.add(query_id, { 'ts' : cur_time, 'result' : data }, overwrite_value=True))
+    cache_dt = self.query_cache_results[query_id]
+    if cache_dt :
+      if cache_dt[0] - cur_time < expires :
+        ret = cache_dt[1]
+    return(ret)
+
+#######################################################################################################################
+  def __add_cache__(self, query_id:str, data) :
+    '''
+    Store data referenced by query_id into cache
+    '''
+    return(self.query_cache_results.add(query_id, ( time.time(), data ), overwrite_value=True))
+
+#######################################################################################################################
+  def __standard_query__(self,query_id:str, from_cache:bool = True, expires:int=10) -> dict:
+    '''
+    Process a query_id, return it's data in a dict format and store into cache
+    '''
+    ret = {}
+    tmp_ret = self.__get_cache__(query_id, expires=expires)
+    if tmp_ret and from_cache :
+      ret = tmp_ret
+    else :
+      for con_seq, row in self.get_remote_query(query_id) :
+        dct = {}
+        for p,k in enumerate(self.query_result_sequence[query_id]) :
+          dct[k] = row[p]
+        try :
+          ret[con_seq].append(dct)
+        except :
+          ret[con_seq] = [ dct ]
+      self.__add_cache__(query_id,ret)
+    return(ret)
+
+#######################################################################################################################
+  def database_name(self,con_seq:int) :
+    '''
+    Function to get database name tied to a specific connection
+    '''
+    databases = [ i for i in self.ve_database_info()[con_seq].keys() ]
+    if len(set(databases)) > 1 :
+      debug_post_msg(self.logger,'More than 01 database for connection %d, something odd is happening: %s'%(con_seq,str(databases)))
+      return(databases)
+    else :
+      return(databases[-1])
 
 #######################################################################################################################
   def get_latest_measurements(self, debug=False, update_from_system:bool = True) :
@@ -135,46 +268,45 @@ class collector() :
     ret = []
     current_time = datetime.datetime.utcnow().isoformat()
     active_sessions = self.ve_active_sessions()      # OK
-    temp_usage = self.ve_temp_usage()                # OK
+    temp_usage = self.__standard_query__('ve_temp_usage.sql') # OK
     object_count = self.ve_user_object_count()       # OK
     wait_events = self.ve_wait_events()              # OK
-    queries_with_pending_work = self.ve_with_work()  #
+    queries_with_pending_work = self.ve_with_work()  # OK
 
-    # Helper functions ( not exposed outside
-    def __database_name__(con_seq) :
-      '''
-      Function to get database name tied to a specific connection
-      '''
-      databases = [ i for i in self.ve_database_info()[con_seq].keys() ]
-      if len(set(databases)) > 1 :
-        debug_post_msg(self.logger,'More than 01 database for connection %d, something odd is happening: %s'%(con_seq,str(databases)))
-        return(databases)
-      else :
-        return(databases[-1])
+    # Measure stale stats
+    for con_seq,stat_info in self.build_stats_script(self.check_statistics_days).items() :
+      database_name = self.database_name(con_seq)
+      for user, tables in stat_info.items() :
+        ret.append({
+          'measurement' : 'oracle_stalestats',
+          'tags' : { 'database' : database_name, 'user' : user },
+          'fields' : { 'total': len(tables.keys()) },
+          'time' : current_time })
+
+
+    # Measure tablespace
+    for con_seq, tbs_data in self.__standard_query__('ve_tablespace_usage.sql').items() :
+      database_name = self.database_name(con_seq)
+      for tbs in tbs_data :
+        ret.append({
+          'measurement' : 'oracle_tablespaces',
+          'tags' : { 'database' : database_name, 'tablespace' : tbs['tablespace'] },
+          'fields' : { 'total': pq_round_number(tbs['total']), 'total_physical_cap' : pq_round_number(tbs['total_physical_cap']),
+                       'free' : pq_round_number(tbs['free']), 'free_pct' :  pq_round_number(tbs['free_pct']) },
+          'time' : current_time })
 
 
     # Measure longops
     for con_seq, longops in queries_with_pending_work.items() :
       me = {}
+      database_name = self.database_name(con_seq)
       for lgop in longops :
         srv,inst,usr = lgop['server'], lgop['inst_name'], lgop['user']
 
-        try :
-          me[srv][inst][usr] += 1
-        except :
-          try :
-            me[srv][inst] = { usr : 1 }
-          except :
-            me[srv] = { inst : { usr : 1 } }
-
-        for server,inst in me.items() :
-          for instance, users  in inst.items() :
-            for user,count in users.items() :
-              ret.append({'measurement' : 'oracle_longops',
-                'tags' : { 'server' : server, 'instance' : instance, 'user' : user },
-                'fields' : { 'count' : count },
-                'time' : current_time })
-
+        ret.append({'measurement' : 'oracle_longops',
+          'tags' : { 'database' : database_name, 'server' : server, 'instance' : instance, 'user' : user },
+          'fields' : { 'hash_value' : lgop['hash_value'], 'sql_id' : lgop['sql_id']  },
+          'time' : current_time })
 
     # Measure wait events
     for con_seq, events in wait_events.items() :
@@ -189,7 +321,7 @@ class collector() :
 
     # Measure temporary tablespace usage
     for con_seq, tablespaces in temp_usage.items() :
-      database = __database_name__(con_seq)
+      database = self.database_name(con_seq)
       for ts in tablespaces :
         ret.append({'measurement' : 'oracle_temp_tablespaces',
                     'tags' : { 'database' : database, 'tablespace' : ts['tablespace'] },
@@ -223,7 +355,7 @@ class collector() :
 
     # Measure object per users
     for con_seq,obj_count in object_count.items() :
-      target_db = __database_name__(con_seq)
+      target_db = self.database_name(con_seq)
       for user,objs in obj_count.items() :
         tmp_copy = objs
         for tp in ( 'VALID', 'INVALID' ) :
@@ -240,25 +372,149 @@ class collector() :
   def health_check(self,update_from_system:bool = True) -> list :
     return([])
 
+
 #######################################################################################################################
-  def ve_temp_usage(self, from_cache:bool = True) :
+  def build_stats_script(self, days:int, tables:list=[],  max_parallel:int=4, estimate_percent:int=60, \
+                               op:str='gather',  output_dir:str="") -> list :
     '''
-    Get temporary tablespace usage from connected databases
+    Build gather statistcs scripts for a specific set of tables or for everything outside the exclude list
+
+    Parameters :
+      op : str -> Which kind of operation should be executed:
+                  "gather" will generate a script for dbms_stats.GATHER_TABLE_STATS
+                  "delete" will generate a script for dbms_stats.delete_table_stats
+                  "both" will generate both
+
+      estimate_percent : int ->  Estimate percent passed to GATHER_TABLE_STATS
+
+      max_parallel     : int ->  Parallel degree limit considered for GATHER_TABLE_STATS
+
+      tables           : list -> Instead of scan the databases for tables, will consider only tables passed within
+                                 the list ( no DBA_TAB_STATS_HISTORY or DBA_TAB_MODIFICATIONS check is performed )
+                                 list format [ [ table_owner:str, table_name:str ] ]
+
+      days             : int ->  Amount of days to be considered, -1 to ignore days
+
+      output_dir       : str -> Directory to store the built scripts ( not supported when tables are specified )
+
+    Returns:
+      dict { con : { table_owner : { table : [ commands ] } } }
+
+      If tables were passes to the function, it will assume that connection instead of a number ( sequence ),
+        it will be called __none__
+
+
     '''
     ret = {}
-    tmp_ret = self.__get_cache__('ve_temp_usage.sql')
-    if tmp_ret and from_cache :
-      ret = tmp_ret
+    delta = datetime.datetime.now() - datetime.timedelta(days=days)
+
+    def __make_list__(owner,op,table,pct,parallel) :
+      rt = []
+      if op in [ 'delete', 'both' ] :
+        rt.append("exec dbms_stats.delete_table_stats( ownname => '%s', TABNAME => '%s', cascade_indexes=> TRUE)"%(owner,table))
+      if op in [ 'gather', 'both' ] :
+        rt.append("exec dbms_stats.GATHER_TABLE_STATS( ownname => '%s', method_opt => 'for all columns size AUTO', estimate_percent=> %d, cascade=>TRUE, TABNAME => '%s', DEGREE=>%d)"%(owner,pct,table,parallel))
+      return(rt)
+
+
+    if len(tables) == 0 :
+      for con_seq,con_data in  self.__standard_query__('ve_stats_history.sql', expires=60).items() :
+        ret[con_seq] = {}
+        for tbs in con_data  :
+          if days != -1 or ( tbs['modification_time'] > tbs['stats_update_time'] < delta ) :
+            to_add = __make_list__(tbs['owner'],op,tbs['table_name'],estimate_percent,max_parallel)
+            try :
+              ret[con_seq][tbs['owner']][tbs['table_name']] = to_add
+            except :
+              ret[con_seq][tbs['owner']] = { tbs['table_name'] : to_add }
+
+      if len(output_dir) > 0 :
+        self.write_ret_into_sqlfile(output_dir,ret,mode='w+')
+
     else :
-      for con_seq, ( tablespace, space_usage ) in self.get_remote_query('ve_temp_usage.sql') :
-        dct = { 'tablespace' : tablespace, 'usage' : space_usage }
+      ret['__none__'] = {}
+      for tbs in tables :
         try :
-          ret[con_seq].append(dct)
+          ret['__none__'][tbs[0]][tbs[1]] = __make_list__(tbs[0],op,tbs[1],estimate_percent,max_parallel)
         except :
-          ret[con_seq] = [ dct ]
-      self.__add_cache__('ve_temp_usage.sql', ret)
+          ret['__none__'][tbs[0]] = { tbs[1] : __make_list__(tbs[0],op,tbs[1],estimate_percent,max_parallel) }
     return(ret)
 
+
+
+#######################################################################################################################
+  def build_defrag_script(self, reclaimable_treshold:int=50, from_cache:bool=True, max_parallel:int=4, estimate_percent:int=60, output_dir:str="") -> dict :
+    '''
+    Build a script file to execute table defrag and index rebuild
+    '''
+    ret = {}
+
+    all_indexes = self.__standard_query__('ve_indexes.sql', expires=60, from_cache=from_cache)
+
+    for con,con_data in self.ve_table_fragmentation(reclaimable_treshold=reclaimable_treshold,from_cache=from_cache).items() :
+      ret[con] = { 'stats' : [], 'pre_stats' : [], 'pos_stats': [] }
+      indexes_con = {}
+
+      # Organize all indexes on this database
+      for v in all_indexes[con] :
+        try :
+          indexes_con[v['owner']][v['table_name']].append((v['index_name'], v['degree']))
+        except :
+          try :
+            indexes_con[v['owner']][v['table_name']] = [ (v['index_name'], v['degree']) ]
+          except :
+            indexes_con[v['owner']] = { v['table_name'] : [ (v['index_name'], v['degree']) ] }
+
+      # Build command dict for this database
+      to_stats = []
+      for table_data in con_data :
+        try :
+          for idx in indexes_con[table_data['owner']][table_data['table_name']] :
+            rpl = [ [ 'INDEX_OWNER.INDEX_NAME', '%s.%s'%(table_data['owner'], idx[0]) ],
+                    [ 'MAX_PARALLEL' , '%s'%max_parallel ],
+                    [ 'STD_PARALLEL' , '%s'%idx[1] ]
+                  ]
+            pre_stats = self.load_sqlfile(os.path.join(self.query_dir,'alter_idx_pre_stats.sql'),
+                                          notdefined=True, specific_replacements=rpl).split('\n')
+            ret[con]['pre_stats'] += pre_stats
+        except :
+          # No index on on this table ( weird )
+          pass
+        to_stats.append([table_data['owner'],table_data['table_name']])
+
+        to_add = [ 'alter table %s.%s enable row movement'%(table_data['owner'],table_data['table_name']), \
+                   'alter table %s.%s shrink space cascade'%(table_data['owner'],table_data['table_name']), \
+                   'alter table %s.%s deallocate unused space'%(table_data['owner'],table_data['table_name']) ]
+        ret[con]['pre_stats'] += to_add
+        ret[con]['pos_stats'] += [ 'ALTER TABLE %s.%s DISABLE ROW MOVEMENT'%(table_data['owner'],table_data['table_name']) ]
+
+      for tables in self.build_stats_script(-1, tables=to_stats, max_parallel=max_parallel, estimate_percent=estimate_percent)['__none__'].values() :
+        for cmds in tables.values() :
+          ret[con]['stats'] += cmds
+
+
+
+    if len(output_dir) > 0 :
+      self.write_ret_into_sqlfile(output_dir,ret,mode='w+')
+
+    return(ret)
+
+
+#######################################################################################################################
+  def ve_table_fragmentation(self, specific_user:str = '', reclaimable_treshold:int=50, from_cache:bool=True) -> dict:
+    '''
+    Get Fragmentation level from all tables within database
+    '''
+    ret = {}
+
+    for con_seq, con_data in self.__standard_query__('ve_table_frag.sql', expires=60).items() :
+      for table in con_data :
+        if table['owner'] not in self.ora_users_to_ignore and table['pct_reclaimable'] >= reclaimable_treshold :
+          try :
+            ret[con_seq].append(table)
+          except :
+            ret[con_seq] = [ table ]
+    return(ret)
 
 #######################################################################################################################
   def ve_with_work(self, from_cache:bool=True) :
@@ -270,25 +526,22 @@ class collector() :
         { }
     '''
     ret = {}
-    tmp_ret = self.__get_cache__('ve_with_work.sql')
-    if tmp_ret and from_cache :
-      ret = tmp_ret
-    else :
-      instance_info = self.ve_instance_info()
-      for con_seq, ( usr, inst_id, sid, pct, runtime, hash_value, sql_id, sqltext ) \
-          in self.get_remote_query('ve_with_work.sql') :
-        hostname, inst_name = instance_info[con_seq][inst_id]['hostname'], instance_info[con_seq][inst_id]['name']
+    with_work = self.__standard_query__('ve_with_work.sql', from_cache=from_cache)
+    instance_info = self.ve_instance_info(from_cache=from_cache)
 
-        dct = { 'server' : hostname, 'inst_name' : inst_name,
-            'user' : usr, 'session_id' : sid, 'pct_completed' : pct, 'runtime' : runtime, 'hash_value' : hash_value,
-            'sql_id' : sql_id, 'sqltext' : sqltext }
-
+    for con_seq,con_data in with_work.items() :
+      for data in con_data :
+        dct = {
+            'server' : instance_info[con_seq][con_data['inst_id']]['hostname'],
+            'inst_name' : instance_info[con_seq][con_data['inst_id']]['name'],
+            'user' : con_data['usr'],              'session_id' : con_data['sid'],
+            'pct_completed' : con_data['pct'],     'runtime' : con_data['runtime'],
+            'hash_value' : con_data['hash_value'], 'sql_id' : con_data['sql_id'],
+            'sqltext' : con_data['sqltext'] }
         try :
           ret[con_seq].append(dct)
         except :
           ret[con_seq] = [ dct ]
-
-      self.__add_cache__('ve_with_work.sql', ret)
 
     return(ret)
 
@@ -494,18 +747,8 @@ class collector() :
         1st element is the connection position ( relative to self.remote_conns)
         2nd element is a row with data
     '''
-    query = ''
     conn_error, conn_ok = [], []
     outer_retry_count:int = 0
-    # Load query file
-    if query_file in self.queries :
-      with open(os.path.join(self.query_dir,query_file), 'r') as fptr :
-        query = fptr.read()
-
-    # Replace strings if any replacement defined
-    if query_file in self.query_replacements.keys() :
-      for r in self.query_replacements[query_file] :
-        query = query.replace(r[0],r[1])
 
     for attempts in range(connection_retry_count) :
       for position in range(len(self.__remote_connections__)) :
@@ -516,7 +759,7 @@ class collector() :
         if position not in conn_error and self.__remote_connections__[position] :
           with self.__remote_connections__[position].cursor() as cur :
             try :
-              cur.execute(query)
+              cur.execute(self.load_sqlfile(query_file))
               inner_retry_count:int = 0
               while True :
                 try :

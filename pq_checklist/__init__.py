@@ -32,6 +32,10 @@ def pq_logger(log_level:int=10, stdout:bool=False, name:str=__name__, to_dev_log
   return(logger)
 
 #######################################################################################################################
+def pq_round_number(number,ndigits=2,tp=float) :
+  return(tp(round(number,ndigits=ndigits)))
+
+#######################################################################################################################
 def debug_post_msg(logger, msg:str, screen_only:bool=False, no_screen:bool = False, end:str='\n', \
                            flush:bool=False, raise_type=None) -> None:
   '''

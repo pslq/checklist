@@ -72,4 +72,8 @@ ora_logon = [ '/ as sysdba', '/ as sysasm' ]
 # 2 = SYSDBA
 # 32768 = SYSASM
 #ora_role = [ 0 ]
-
+# Users with objects into database to ignore when tracking usage and health
+ora_users_to_ignore = [ 'PUBLIC', 'APPQOSSYS', 'CTXSYS', 'ORDPLUGINS', 'GSMADMIN_INTERNAL', 'XDB', 'ORDDATA', 'DVSYS', 'OUTLN', 'SYSTEM', 'ORACLE_OCM', 'WMSYS', 'OLAPSYS', 'LBACSYS', 'SYS', 'MDSYS', 'DBSNMP', 'SI_INFORMTN_SCHEMA', 'DVF', 'DBSFWUSER', 'AUDSYS', 'REMOTE_SCHEDULER_AGENT', 'OJVMSYS', 'ORDSYS' ]
+#
+# Amount of days required to consider a statistics outadated
+check_statistics_days = 2
