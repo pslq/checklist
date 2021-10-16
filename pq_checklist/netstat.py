@@ -10,10 +10,10 @@ import csv, datetime
 from .Stats_Parser import StatsParser
 
 class parser(StatsParser) :
-  def __init__(self, logger = None, ansible_module = None, cwd = '/tmp', preserv_stats = False, bos_data = None) :
+  def __init__(self, logger = None, cwd = '/tmp', preserv_stats = False, bos_data = None) :
     '''
     '''
-    super().__init__(logger = logger, cwd = cwd, ansible_module = ansible_module)
+    super().__init__(logger = logger, cwd = cwd)
     self.bos_data      = bos_data
     self.preserv_stats = preserv_stats
     self.commands      = {

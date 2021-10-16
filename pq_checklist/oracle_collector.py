@@ -11,12 +11,11 @@ import importlib, datetime, os.path, time
 # echo "select 1 from dual; " | su - oracle -c "export ORACLE_SID=tasy21 ; export ORACLE_HOME=/oracle/database/dbhome_1 ;  /oracle/database/dbhome_1/bin/sqlplus / as sysdba @/tmp/login.sql"
 
 class collector() :
-  def __init__(self, logger = None, ansible_module = None, config = None, bos_data = None) :
+  def __init__(self, logger = None, config = None, bos_data = None) :
     '''
     Get performance and health metrics from oracle database instances
     '''
     self.logger         = logger
-    self.ansible_module = ansible_module
     self.config         = config
     self.conn_type      = self.config['ORACLE']['conn_type'].strip().lower()
     self.remote_conns   = None

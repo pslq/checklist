@@ -10,7 +10,7 @@ import concurrent.futures
 
 
 class StatsParser() :
-  def __init__(self, logger = None, ansible_module = None, samples = 2, interval = 1, cwd = '/tmp', bos_data = None ):
+  def __init__(self, logger = None, samples = 2, interval = 1, cwd = '/tmp', bos_data = None ):
     '''
     General class with main parsers for stats commands
     '''
@@ -18,7 +18,6 @@ class StatsParser() :
     self.interval       = int(interval)
     self.logger         = logger
     self.cwd            = cwd
-    self.ansible_module = ansible_module
     self.bos_data       = bos_data
     self.commands       = {}
     self.functions      = {}
@@ -123,8 +122,7 @@ class StatsParser() :
 
       cmd_out = get_command_output(command        =self.commands[command_id],
                                    cwd            = self.cwd,
-                                   pq_logger      = self.logger,
-                                   ansible_module = self.ansible_module)
+                                   pq_logger      = self.logger)
       if cmd_out['retcode'] == 0 :
         ret = parse_function(cmd_out['stdout'])
     else :
@@ -351,23 +349,23 @@ class StatsParser() :
 #######################################################################################################################
   def parse_sar_stats(self, data:list, key_heading:str='cpu', \
                             specific_reading:dict = { 'key_position' : 0, 'key_value' : 'ALL' }, \
-                            readings_to_ignore:dict={ 'key_position' : 0, 'key_value' : '-----'}) :
+                            readings_to_ignore:list=[{ 'key_position' : 0, 'key_value' : ['-----']}], \
+                            keys:list=[]) :
     ret = {}
-    keys = []
     try :
       for dt in line_cleanup(data, remove_endln=True) :
-        if dt.startswith(key_heading) :
-          keys = dt.replace('%', '').split(' ')
-        elif len(keys) > 0 :
+        if len(keys) > 0 :
           elms = dt.split(' ')
           if len(elms) == len(keys) :
             to_add = True
             if len(specific_reading.keys()) > 0 :
               if elms[specific_reading['key_position']] != specific_reading['key_value'] :
                 to_add = False
-            if len(readings_to_ignore.keys()) > 0 :
-              if elms[readings_to_ignore['key_position']] == readings_to_ignore['key_value'] :
-                to_add = False
+            if len(readings_to_ignore) > 0 :
+              for dt in readings_to_ignore :
+                if elms[dt['key_position']] in dt ['key_value'] :
+                  to_add = False
+                  break
             if to_add :
               for p,v in enumerate(elms) :
                 val = try_conv_complex(v.replace(',', '.'))
@@ -380,6 +378,8 @@ class StatsParser() :
                   ret[keys[p]].append(val)
                 except :
                   ret[keys[p]] = [ val ]
+        elif dt.startswith(key_heading) :
+          keys = dt.replace('%', '').split(' ')
     except Exception as e :
       debug_post_msg(self.logger, 'Error during parse_sar_stats: %s'%e)
     return(ret,keys)

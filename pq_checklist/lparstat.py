@@ -11,10 +11,10 @@ from collections import defaultdict
 from .Stats_Parser import StatsParser
 
 class parser(StatsParser) :
-  def __init__(self, logger = None, ansible_module = None, samples = 2, interval = 1, cwd = '/tmp', bos_data = None) :
+  def __init__(self, logger = None, samples = 2, interval = 1, cwd = '/tmp', bos_data = None) :
     '''
     '''
-    super().__init__(logger = logger, ansible_module = ansible_module, cwd = cwd)
+    super().__init__(logger = logger, cwd = cwd)
     self.bos_data = bos_data
     self.commands = {
         'info' : "lparstat -i",

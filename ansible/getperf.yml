@@ -55,6 +55,11 @@
       register: entstat
       poll: 02 
 
+    - name: fcstat
+      fcstat:
+      register: fcstat
+      poll: 02
+
     - name: uname_a
       command: uname -a
       poll: 02 

@@ -10,11 +10,11 @@ import os
 from .Stats_Parser import StatsParser
 
 class bos(StatsParser) :
-  def __init__(self, logger = None, ansible_module = None, cwd = '/tmp', preserv_stats = False) :
+  def __init__(self, logger = None, cwd = '/tmp', preserv_stats = False) :
     '''
     Class with Basic OS information
     '''
-    super().__init__(logger = logger, ansible_module= ansible_module, cwd = cwd)
+    super().__init__(logger = logger, cwd = cwd)
 
     self.preserv_stats  = preserv_stats
     self.commands = {
