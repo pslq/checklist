@@ -368,7 +368,13 @@ class StatsParser() :
                   break
             if to_add :
               for p,v in enumerate(elms) :
-                val = try_conv_complex(v.replace(',', '.'))
+                tmp_val = v.replace(',', '.')
+                if tmp_val[-1].lower() == 'k' :
+                  val = try_conv_complex(tmp_val[:-1])*1024
+                elif tmp_val[-1].lower() == 'm' :
+                  val = try_conv_complex(tmp_val[:-1])*1024*1024
+                else :
+                  val = try_conv_complex(tmp_val)
                 try :
                   if val == '-' :
                     val = 0
