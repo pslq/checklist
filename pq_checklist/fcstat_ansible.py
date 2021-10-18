@@ -41,7 +41,7 @@ def main():
 
     # Get Stats for these adapters
     for adpt in result['adapters'] :
-      rc, stdout, stderr = module.run_command("fcstat -D %s"%adpt)
+      rc, stdout, stderr = module.run_command("fcstat -e %s"%adpt)
       if rc == 0 :
         result['stdout_lines'][adpt] = stdout
     if len(result['stdout_lines']) == 0 :

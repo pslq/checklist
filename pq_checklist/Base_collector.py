@@ -78,7 +78,7 @@ class Base_collector :
     Returns:
       None
     '''
-    for provider in list(self.providers.values()) + [ self.bos_data ]  :
+    for provider in  [ self.bos_data ] + list(self.providers.values()) :
       try :
         provider.update_from_dict(data)
       except Exception as e :
@@ -145,6 +145,10 @@ class Base_collector :
     if 'cpu' in self.checks_to_perform :
       from . import cpu_collector
       ret.append(l_check('cpu', cpu_collector.collector(config = self.config, logger = self.logger, bos_data = look_for_bos() ), nodename, local_only))
+
+    if 'dio' in self.checks_to_perform :
+      from . import dio_collector
+      ret.append(l_check('dio', dio_collector.collector(config = self.config, logger = self.logger, bos_data = look_for_bos() ), nodename, local_only))
 
     if 'oracle' in self.checks_to_perform :
       from . import oracle_collector

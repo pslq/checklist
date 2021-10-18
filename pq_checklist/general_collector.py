@@ -95,6 +95,11 @@ class collector(Base_collector) :
     if 'net' in self.checks_to_perform :
       to_collect += [ 'entstat', 'netstat_s' ]
       tasks_output['entstat'] = [ 'adapters' ]
+    if 'dio' in self.checks_to_perform :
+      to_collect += [ 'iostat_LINUX', 'iostat_AIX', 'fcstat' ]
+      tasks_output['fcstat'] = [ 'adapters' ]
+
+
 
     runner_parms = { 'playbook' : self.config['ANSIBLE']['playbook'].strip(),
                      'host_limit' : self.config['ANSIBLE']['host_target'].strip(),
@@ -109,7 +114,7 @@ class collector(Base_collector) :
         if host not in self.collectors :
           if self.__load_collectors_for_host__(host) :
             self.__load_collectors_for_host__(self.nodename, local_only=True)
-        for check in ( 'cpu', 'net' ) :
+        for check in ( 'cpu', 'net', 'dio' ) :
           if check in self.checks_to_perform and check in self.collectors[host] :
             self.collectors[host][check].update_from_dict(data)
     except Exception as e :
