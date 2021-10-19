@@ -1,10 +1,8 @@
 select
+  to_char(FIRST_TIME,'yyyy-mm-dd  hh:MM'),
   inst_id,
-  thread#,
-  sequence#,
-  first_change,
-  first_time,
-  switch_change#,
-  con_id
+  count(*)
 from
-  GV$LOGHIST
+  gv$log_history
+group by to_char(FIRST_TIME,'yyyy-mm-dd  hh:MM'),inst_id
+order by 1,2

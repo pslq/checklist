@@ -30,25 +30,32 @@ class collector() :
     self.queries = [ "ve_temp_usage.sql", "ve_active_sessions.sql", "ve_cons_per_user.sql",
                      "ve_with_work.sql",  "ve_wait_event.sql", 've_instance_info.sql',   've_users_with_objets.sql',
                      "ve_wait_hist.sql", "ve_database_info.sql", "ve_tablespace_usage.sql", "ve_table_frag.sql",
-                     've_indexes.sql', 've_stats_history.sql' ]
+                     've_indexes.sql', 've_stats_history.sql', 've_log.sql', 've_logfile.sql', 've_loghist.sql' ]
 
     # helper to avoid convert the list to a string that will be used within Oracle multiple times
     __PQ_NOTOWNERS_str__ = str(self.ora_users_to_ignore).replace('[','').replace(']','')
+    __PQ_SECONDS_MONITOR__ = self.config['LOOP']['interval'].strip()
 
-    self.query_replacements = { 've_wait_event.sql' : [ [ 'PQ_SECONDS_MONITOR', self.config['LOOP']['interval'].strip() ] ],
-                                've_wait_hist.sql'  : [ [ 'PQ_SECONDS_MONITOR', self.config['LOOP']['interval'].strip() ] ],
-                                've_indexes.sql'    : [ [ 'PQ_NOTOWNERS', __PQ_NOTOWNERS_str__ ]],
-                                've_table_frag.sql' : [ [ 'PQ_NOTOWNERS', __PQ_NOTOWNERS_str__ ]],
-                                've_stats_history.sql' : [ [ 'PQ_NOTOWNERS', __PQ_NOTOWNERS_str__ ]]
+    self.query_replacements = { 've_wait_event.sql' : [ [ 'PQ_SECONDS_MONITOR', __PQ_SECONDS_MONITOR__ ] ],
+                                've_wait_hist.sql'  : [ [ 'PQ_SECONDS_MONITOR', __PQ_SECONDS_MONITOR__ ] ],
+                                've_indexes.sql'    : [ [ 'PQ_NOTOWNERS',       __PQ_NOTOWNERS_str__ ]],
+                                've_table_frag.sql' : [ [ 'PQ_NOTOWNERS',       __PQ_NOTOWNERS_str__ ]],
+                                've_stats_history.sql' : [ [ 'PQ_NOTOWNERS',    __PQ_NOTOWNERS_str__ ]]
                               }
 
     self.query_result_sequence = {
-        've_table_frag.sql' : ( 'owner', 'table_name', 'table_size', 'actual_size', 'wasted_space', 'pct_reclaimable' ),
+        've_table_frag.sql' : ( 'owner', 'table_name', 'table_size', 'actual_size',
+                                'wasted_space', 'pct_reclaimable' ),
         've_tablespace_usage.sql' : ( 'tablespace', 'total', 'total_physical_cap', 'free', 'free_pct' ),
         've_temp_usage.sql' : ( 'tablespace', 'usage' ),
         've_with_work.sql' : ( 'usr', 'inst_id', 'sid', 'pct', 'runtime', 'hash_value', 'sql_id', 'sqltext'),
-        've_indexes.sql' : ( 'owner','index_name','index_type','table_owner','table_name','table_type','compression','degree','generated','visibility' ),
-        've_stats_history.sql' : ( 'owner', 'table_name', 'stats_update_time', 'modification_time' )
+        've_indexes.sql' : ( 'owner','index_name','index_type','table_owner','table_name','table_type','compression',
+                             'degree','generated','visibility' ),
+        've_stats_history.sql' : ( 'owner', 'table_name', 'stats_update_time', 'modification_time' ),
+        've_log.sql' : ( 'inst_id', 'group', 'thread', 'sequence', 'bytes', 'blocksize', 'members', 'status',
+                         'first_time', 'next_time' ),
+        've_logfile.sql' : ( 'inst_id', 'group', 'status', 'type', 'member', 'is_recovery_dest_file' ),
+        've_loghist.sql' : ( 'char_datetime', 'inst_id', 'count' )
     }
 
 
@@ -256,7 +263,9 @@ class collector() :
     '''
     databases = [ i for i in self.ve_database_info()[con_seq].keys() ]
     if len(set(databases)) > 1 :
-      debug_post_msg(self.logger,'More than 01 database for connection %d, something odd is happening: %s'%(con_seq,str(databases)))
+      debug_post_msg(self.logger,
+                     'More than 01 database for connection %d, something odd is happening: %s'%(
+                        con_seq,str(databases)))
       return(databases)
     else :
       return(databases[-1])
@@ -271,6 +280,18 @@ class collector() :
     object_count = self.ve_user_object_count()       # OK
     wait_events = self.ve_wait_events()              # OK
     queries_with_pending_work = self.ve_with_work()  # OK
+
+    # Measure logswitches
+    for ldb,ldb_info in self.ve_log().items() :
+      for instance,instance_data in ldb_info.items() :
+        for lswitch in instance_data['log_switches'] :
+          lkh = lswitch['datetime'] - datetime.timedelta(minutes=lswitch['datetime'].minute) # hour
+          lkm = lswitch['datetime'].isoformat()
+          ret.append({
+                'measurement' : 'oracle_logswitches',
+                'tags' : { 'database' : ldb },
+                'fields' : { instance : lswitch['count'] },
+                'time' :  lkm })
 
     # Measure stale stats
     for con_seq,stat_info in self.build_stats_script(self.check_statistics_days).items() :
@@ -290,8 +311,10 @@ class collector() :
         ret.append({
           'measurement' : 'oracle_tablespaces',
           'tags' : { 'database' : database_name, 'tablespace' : tbs['tablespace'] },
-          'fields' : { 'total': pq_round_number(tbs['total']), 'total_physical_cap' : pq_round_number(tbs['total_physical_cap']),
-                       'free' : pq_round_number(tbs['free']), 'free_pct' :  pq_round_number(tbs['free_pct']) },
+          'fields' : { 'total': pq_round_number(tbs['total']),
+                       'total_physical_cap' : pq_round_number(tbs['total_physical_cap']),
+                       'free' : pq_round_number(tbs['free']),
+                       'free_pct' :  pq_round_number(tbs['free_pct']) },
           'time' : current_time })
 
 
@@ -544,6 +567,47 @@ class collector() :
 
     return(ret)
 
+#######################################################################################################################
+  def ve_log(self, from_cache:bool=True) -> dict:
+    '''
+    '''
+    ret = {}
+    ve_log     = self.__standard_query__('ve_log.sql', from_cache=from_cache)
+    instance_info = self.ve_instance_info(from_cache=from_cache)
+
+    # Get log switches per minute
+    for con_seq,con_data in self.__standard_query__('ve_loghist.sql', from_cache=from_cache).items() :
+      database_name = self.database_name(con_seq)
+      ret[database_name] = { }
+      for l_entry in con_data :
+        inst_name = instance_info[con_seq][l_entry['inst_id']]['name']
+        dct = {
+            'datetime' : datetime.datetime.strptime(l_entry['char_datetime'], '%Y-%m-%d  %H:%M'),
+            'count' : l_entry['count'] }
+        try :
+          ret[database_name][inst_name]['log_switches'].append(dct)
+        except :
+          try :
+            ret[database_name][inst_name]['log_switches'] = [ dct ]
+          except :
+            ret[database_name][inst_name] = { 'log_switches' : [ dct ] }
+
+    for con_seq,con_data in self.__standard_query__('ve_logfile.sql', from_cache=from_cache).items() :
+      database_name = self.database_name(con_seq)
+      for l_entry in con_data :
+        inst_name = instance_info[con_seq][l_entry['inst_id']]['name']
+        dct = { }
+        for k in [ 'group', 'status', 'type', 'member', 'is_recovery_dest_file' ] :
+          dct[k] = l_entry[k]
+        try :
+          ret[database_name][inst_name]['logfiles'].append(dct)
+        except :
+          try :
+            ret[database_name][inst_name]['logfiles'] = [ dct ]
+          except :
+            ret[database_name][inst_name] = { 'logfiles' : [ dct ] }
+
+    return(ret)
 
 #######################################################################################################################
   def ve_active_sessions(self, from_cache:bool=True) :
@@ -784,5 +848,6 @@ class collector() :
         conn_error = list(set(conn_error))
       else :
         break
+
 
 #######################################################################################################################
