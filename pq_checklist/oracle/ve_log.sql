@@ -1,0 +1,13 @@
+select
+  INST_ID,
+  GROUP#,
+  THREAD#,
+  SEQUENCE#,
+  BYTES,
+  BLOCKSIZE,
+  MEMBERS,
+  ARCHIVED,
+  STATUS,
+  FIRST_TIME,
+  NEXT_TIME
+from GV$LOG;

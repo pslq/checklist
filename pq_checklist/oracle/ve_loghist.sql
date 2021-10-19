@@ -1,0 +1,10 @@
+select
+  inst_id,
+  thread#,
+  sequence#,
+  first_change,
+  first_time,
+  switch_change#,
+  con_id
+from
+  GV$LOGHIST
