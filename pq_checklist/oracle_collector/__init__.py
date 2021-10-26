@@ -181,11 +181,11 @@ class collector(OracleConnection) :
 
     for con_seq, longops in self.ve_with_work().items() :
       database_name = self.database_name(con_seq)
-      sql_ids[database_name] = []
+      sql_ids[con_seq] = []
       for lgop in longops :
-        sql_ids[database_name].append(lgop['sql_id'])
-      ids = list(set(sql_ids[database_name]))
-      sql_ids[database_name] = ids
+        sql_ids[con_seq].append(lgop['sql_id'])
+      ids = list(set(sql_ids[con_seq]))
+      sql_ids[con_seq] = ids
       if len(ids) > 0 :
         ret.append('The database %s has a total of %d longops happening, please check dumped queries'%(database_name,len(ids)))
 
