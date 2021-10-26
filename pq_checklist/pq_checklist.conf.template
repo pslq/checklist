@@ -77,3 +77,11 @@ ora_users_to_ignore = [ 'PUBLIC', 'APPQOSSYS', 'CTXSYS', 'ORDPLUGINS', 'GSMADMIN
 #
 # Amount of days required to consider a statistics outadated
 check_statistics_days = 2
+log_switches_hour_alert = 3
+script_dumpdir = /tmp/oracle_sql
+dump_longops = True
+dump_running_ids = True
+table_reclaimable_treshold = 50
+stats_max_parallel = 10
+stats_estimate_percent = 60
+

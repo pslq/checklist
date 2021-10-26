@@ -1,274 +1,21 @@
 #!/opt/freeware/bin/python3
 
 # All imports used
-from .Stats_Parser import StatsParser
-from .cache import pq_cache
-from . import avg_list, debug_post_msg, pq_round_number
+from .. import avg_list, debug_post_msg, pq_round_number
 from ast import literal_eval
-import importlib, datetime, os.path, time
+import importlib, datetime, os.path, time, os, json
+from .OracleConnection import OracleConnection
 
 
-# echo "select 1 from dual; " | su - oracle -c "export ORACLE_SID=tasy21 ; export ORACLE_HOME=/oracle/database/dbhome_1 ;  /oracle/database/dbhome_1/bin/sqlplus / as sysdba @/tmp/login.sql"
-
-class collector() :
+class collector(OracleConnection) :
   def __init__(self, logger = None, config = None, bos_data = None) :
     '''
     Get performance and health metrics from oracle database instances
     '''
-    self.logger         = logger
-    self.config         = config
-    self.conn_type      = self.config['ORACLE']['conn_type'].strip().lower()
-    self.remote_conns   = None
-    self.bos_data       = bos_data
-    self.query_dir      = os.path.join(os.path.dirname(os.path.abspath(__file__)),"oracle")
-    self.nodename       = os.uname().nodename
-
-    self.ora_users_to_ignore = literal_eval(config['ORACLE']['ora_users_to_ignore']) if 'ora_users_to_ignore' in config['ORACLE'] else []
-    self.check_statistics_days = int(config['ORACLE']['check_statistics_days']) if 'check_statistics_days' in config['ORACLE'] else -1
-
-    self.monitor_sample = 200
-    self.queries = [ "ve_temp_usage.sql", "ve_active_sessions.sql", "ve_cons_per_user.sql",
-                     "ve_with_work.sql",  "ve_wait_event.sql", 've_instance_info.sql',   've_users_with_objets.sql',
-                     "ve_wait_hist.sql", "ve_database_info.sql", "ve_tablespace_usage.sql", "ve_table_frag.sql",
-                     've_indexes.sql', 've_stats_history.sql', 've_log.sql', 've_logfile.sql', 've_loghist.sql' ]
-
-    # helper to avoid convert the list to a string that will be used within Oracle multiple times
-    __PQ_NOTOWNERS_str__ = str(self.ora_users_to_ignore).replace('[','').replace(']','')
-    __PQ_SECONDS_MONITOR__ = self.config['LOOP']['interval'].strip()
-
-    self.query_replacements = { 've_wait_event.sql' : [ [ 'PQ_SECONDS_MONITOR', __PQ_SECONDS_MONITOR__ ] ],
-                                've_wait_hist.sql'  : [ [ 'PQ_SECONDS_MONITOR', __PQ_SECONDS_MONITOR__ ] ],
-                                've_indexes.sql'    : [ [ 'PQ_NOTOWNERS',       __PQ_NOTOWNERS_str__ ]],
-                                've_table_frag.sql' : [ [ 'PQ_NOTOWNERS',       __PQ_NOTOWNERS_str__ ]],
-                                've_stats_history.sql' : [ [ 'PQ_NOTOWNERS',    __PQ_NOTOWNERS_str__ ]]
-                              }
-
-    self.query_result_sequence = {
-        've_table_frag.sql' : ( 'owner', 'table_name', 'table_size', 'actual_size',
-                                'wasted_space', 'pct_reclaimable' ),
-        've_tablespace_usage.sql' : ( 'tablespace', 'total', 'total_physical_cap', 'free', 'free_pct' ),
-        've_temp_usage.sql' : ( 'tablespace', 'usage' ),
-        've_with_work.sql' : ( 'usr', 'inst_id', 'sid', 'pct', 'runtime', 'hash_value', 'sql_id', 'sqltext'),
-        've_indexes.sql' : ( 'owner','index_name','index_type','table_owner','table_name','table_type','compression',
-                             'degree','generated','visibility' ),
-        've_stats_history.sql' : ( 'owner', 'table_name', 'stats_update_time', 'modification_time' ),
-        've_log.sql' : ( 'inst_id', 'group', 'thread', 'sequence', 'bytes', 'blocksize', 'members', 'status',
-                         'first_time', 'next_time' ),
-        've_logfile.sql' : ( 'inst_id', 'group', 'status', 'type', 'member', 'is_recovery_dest_file' ),
-        've_loghist.sql' : ( 'char_datetime', 'inst_id', 'count' )
-    }
-
-
-    self.query_cache_results = pq_cache(logger = self.logger)
-
-    self.__remote_connections__ = [ ]
-    self.only_on_localhost = False
-
-    if self.conn_type != "none" :
-      self.conn_data      = {}
-      for conf_key in ('ora_user', 'ora_sid', 'ora_home', 'ora_pass', 'ora_dsn', 'ora_logon', 'ora_role' ) :
-        if conf_key in config['ORACLE'] :
-          self.conn_data[conf_key] = literal_eval(config['ORACLE'][conf_key])
-        else :
-          self.conn_data[conf_key] = None
-      if isinstance(self.conn_data['ora_home'],list) :
-        self.oracle_bin = [ '%s/bin/sqlplus'%v for v in self.conn_data['ora_home'] ]
-      else :
-        self.oracle_bin = None
-    else :
-      self.conn_data,self.oracle_bin = None, None
-      debug_post_msg(self.logger,'No connection method defined')
-    if isinstance(self.conn_data['ora_dsn'], list) and \
-        self.conn_type == 'remote' and \
-          len(self.conn_data['ora_user']) == \
-          len(self.conn_data['ora_pass']) == \
-          len(self.conn_data['ora_dsn']) == \
-          len(self.conn_data['ora_role']) > 0 :
-      self.__remote_connections__ = [ None for i in range(len(self.conn_data['ora_user'])) ]
-      self.remote_connectall()
-      self.only_on_localhost = True
+    super().__init__( config = config, logger = logger)
+    self.bos_data = bos_data
 
     return(None)
-
-#######################################################################################################################
-  def remote_connectall(self) :
-    if importlib.util.find_spec('cx_Oracle') :
-      for i in range(len(self.conn_data['ora_user'])) :
-        self.remote_connect(i)
-    else :
-      debug_post_msg(self.logger,'Oracle python module not found')
-    return(None)
-
-
-#######################################################################################################################
-  def remote_connect(self,position:int) :
-    '''
-    Stablish a connection to a remote database
-
-    Parameters :
-      position -> Connection position within the configuration ( think as a list )
-
-    Returns :
-      Send back a database connection if ok, otherwise None
-    '''
-    ret = None
-    import cx_Oracle
-    try :
-      self.__remote_connections__[position] = cx_Oracle.connect(user=self.conn_data['ora_user'][position],
-                                                        password=self.conn_data['ora_pass'][position],
-                                                        dsn=self.conn_data['ora_dsn'][position],
-                                                        mode=self.conn_data['ora_role'][position], encoding="UTF-8")
-      ret = self.__remote_connections__[position]
-    except Exception as e :
-      debug_post_msg(self.logger,'Oracle client error connecting to position %d : %s'%(position,str(e)))
-    return(ret)
-
-#######################################################################################################################
-  def remote_closeall(self) :
-    '''
-    Close all connections
-    '''
-    for i in self.remote_conns :
-      if i :
-        i.close()
-    return(None)
-#######################################################################################################################
-  def remote_close(self, position:int) :
-    '''
-    Close connection on a specific position
-    '''
-    if len(self.__remote_connections__) >= position :
-      if self.__remote_connections__[position] :
-        self.__remote_connections__[position].close()
-    return(None)
-
-#######################################################################################################################
-  def write_ret_into_sqlfile(self,output_dir:str,ret_obj:dict, mode:str='w+') -> bool :
-    '''
-    Write a group of queries into it's sqlfiles
-
-    Parameters :
-      output_dir -> directory into the local system that will hold all files ( one per database )
-      ret_obj    -> object to be written
-      mode       -> write mode to be passed when opening the file ( see open() )
-
-    Returns : bool -> [True,False]
-    '''
-    ret = True
-    if len(output_dir) > 0 :
-      for con_seq,data in ret_obj.items() :
-        db_name = self.database_name(con_seq)
-        for stat,cmds in data.items() :
-          try :
-            with open(os.path.join(output_dir,'%s_%s.sql'%(db_name,stat)), mode) as fptr :
-              for cmd in cmds :
-                try :
-                  fptr.write('%s;\n'%cmd)
-                except Exception as e :
-                  debug_post_msg(self.logger,'Error writting sqlfile : %s'%str(e), raise_type=Exception)
-          except Exception as e :
-            debug_post_msg(self.logger,'Error writting sqlfile : %s'%str(e), raise_type=Exception)
-      else :
-        debug_post_msg(self.logger,'No output_dir defined')
-        ret = False
-    return(ret)
-
-#######################################################################################################################
-  def load_sqlfile(self, query_file:str, notdefined:bool=False, specific_replacements:list=[]) -> str:
-    '''
-    Load and parse sqlfiles
-    '''
-    # Replace strings if any replacement defined
-    query = ''
-    tgt = None
-
-    # Load query file
-    if query_file in self.queries :
-      tgt = os.path.join(self.query_dir,query_file)
-    elif notdefined :
-      tgt = query_file
-
-    if tgt :
-      try :
-        with open(tgt, 'r') as fptr :
-          query = fptr.read()
-      except Exception as e :
-        debug_post_msg(self.logger,'Error loading sqlfile : %s'%str(e), raise_type=Exception)
-
-    # Replace strings if any replacement defined
-    replacements = specific_replacements
-    if query_file in self.query_replacements.keys() :
-      replacements += self.query_replacements[query_file]
-
-    for r in replacements :
-      query = query.replace(r[0],r[1])
-
-    return(query)
-
-
-#######################################################################################################################
-  def __get_cache__(self, query_id:str, expires:int=10, when_empty=None) :
-    '''
-    Store object into cache, if object is older than what is defined into expires,
-    returns the value defined in when_empty
-
-    Parameters :
-      query_id :str -> Object to be stored ( usually a dict )
-      expires  :int -> amount of seconds that will consider the object valid
-      when_empty : obj -> what to report when nothing in cache or expired object
-
-    Returns :
-      object
-    '''
-    ret = when_empty
-    cur_time = time.time()
-    cache_dt = self.query_cache_results[query_id]
-    if cache_dt :
-      if cache_dt[0] - cur_time < expires :
-        ret = cache_dt[1]
-    return(ret)
-
-#######################################################################################################################
-  def __add_cache__(self, query_id:str, data) :
-    '''
-    Store data referenced by query_id into cache
-    '''
-    return(self.query_cache_results.add(query_id, ( time.time(), data ), overwrite_value=True))
-
-#######################################################################################################################
-  def __standard_query__(self,query_id:str, from_cache:bool = True, expires:int=10) -> dict:
-    '''
-    Process a query_id, return it's data in a dict format and store into cache
-    '''
-    ret = {}
-    tmp_ret = self.__get_cache__(query_id, expires=expires)
-    if tmp_ret and from_cache :
-      ret = tmp_ret
-    else :
-      for con_seq, row in self.get_remote_query(query_id) :
-        dct = {}
-        for p,k in enumerate(self.query_result_sequence[query_id]) :
-          dct[k] = row[p]
-        try :
-          ret[con_seq].append(dct)
-        except :
-          ret[con_seq] = [ dct ]
-      self.__add_cache__(query_id,ret)
-    return(ret)
-
-#######################################################################################################################
-  def database_name(self,con_seq:int) :
-    '''
-    Function to get database name tied to a specific connection
-    '''
-    databases = [ i for i in self.ve_database_info()[con_seq].keys() ]
-    if len(set(databases)) > 1 :
-      debug_post_msg(self.logger,
-                     'More than 01 database for connection %d, something odd is happening: %s'%(
-                        con_seq,str(databases)))
-      return(databases)
-    else :
-      return(databases[-1])
 
 #######################################################################################################################
   def get_latest_measurements(self, debug=False, update_from_system:bool = True) :
@@ -326,7 +73,7 @@ class collector() :
         srv,inst,usr = lgop['server'], lgop['inst_name'], lgop['user']
 
         ret.append({'measurement' : 'oracle_longops',
-          'tags' : { 'database' : database_name, 'server' : server, 'instance' : instance, 'user' : user },
+          'tags' : { 'database' : database_name, 'server' : srv, 'instance' : inst, 'user' : usr },
           'fields' : { 'hash_value' : lgop['hash_value'], 'sql_id' : lgop['sql_id']  },
           'time' : current_time })
 
@@ -338,7 +85,19 @@ class collector() :
           'fields' : { 'count' : event['count'] },
           'time' : current_time })
 
-
+    # queries from monitor
+    for con_seq,data in self.ve_sql_monitor().items() :
+      database_name = self.database_name(con_seq)
+      ret.append({'measurement' : 'oracle_running_queries',
+          'tags' : { 'database' : database_name },
+            'fields' : { 'total' : len(data['current']) },
+          'time' : current_time })
+      for queries in data['current'] :
+        ret.append({'measurement' : 'oracle_sql_monitor',
+          'tags' : { 'database' : database_name,     'status' : queries['status'], 'username' : queries['username'],
+                     'module'   : queries['module'], 'service_name' : queries['service_name'] },
+          'fields' : { 'sql_id' : queries['sql_id'], 'tot_time' : queries['tot_time'] },
+          'time' : current_time })
 
 
     # Measure temporary tablespace usage
@@ -374,7 +133,6 @@ class collector() :
                       'fields' : fields, 'time' : current_time
                      })
 
-
     # Measure object per users
     for con_seq,obj_count in object_count.items() :
       target_db = self.database_name(con_seq)
@@ -392,8 +150,131 @@ class collector() :
 
 #######################################################################################################################
   def health_check(self,update_from_system:bool = True) -> list :
-    return([])
+    '''
+    '''
+    ret = []
 
+    # Measure logswitches
+    if self.log_switches_hour_alert > 0 :
+      databases = {}
+      for ldb,ldb_info in self.ve_log().items() :
+        databases[ldb] = {}
+        for instance,instance_data in ldb_info.items() :
+          databases[ldb][instance] = {}
+          for lswitch in instance_data['log_switches'] :
+            lkh = lswitch['datetime'] - datetime.timedelta(minutes=lswitch['datetime'].minute) # hour
+            try :
+              databases[ldb][instance][lkh] += lswitch['count']
+            except :
+              databases[ldb][instance][lkh] = lswitch['count']
+      for db,data in databases.items() :
+        for instance,dates in data.items() :
+          for dt,cnt in dates.items() :
+            if cnt > self.log_switches_hour_alert :
+              ret.append('The instance %s of database %s switched logs %d times at : %s'%(instance,ldb,cnt,str(dt)))
+
+    # Placeholder to store sql_ids
+    sql_ids = {}
+    fts_count = 0
+    # Dump directory
+    dst_dir = os.path.join(self.script_dumpdir,'dumped_queries')
+
+    for con_seq, longops in self.ve_with_work().items() :
+      database_name = self.database_name(con_seq)
+      sql_ids[database_name] = []
+      for lgop in longops :
+        sql_ids[database_name].append(lgop['sql_id'])
+      ids = list(set(sql_ids[database_name]))
+      sql_ids[database_name] = ids
+      if len(ids) > 0 :
+        ret.append('The database %s has a total of %d longops happening, please check dumped queries'%(database_name,len(ids)))
+
+    if self.dump_longops :
+      try :
+        os.mkdir(dst_dir)
+      except :
+        pass
+
+      for con_seq,queries in sql_ids.items() :
+        database_name = self.database_name(con_seq)
+        for sql_id in queries :
+          fts_count += 1 if self.ve_sqltxt(sql_id, con_seq, dst_dir=dst_dir, dump_only_if_fts=True)['has_fts'] else 0
+
+    if self.dump_running_ids :
+      # queries from monitor
+      try :
+        os.mkdir(dst_dir)
+      except :
+        pass
+
+      for con_seq,data in self.ve_sql_monitor().items() :
+        database_name = self.database_name(con_seq)
+        for sql_id in data['top_queries'] :
+          fts_count += 1 if self.ve_sqltxt(sql_id, con_seq, dst_dir=dst_dir, dump_only_if_fts=True)['has_fts'] else 0
+
+    if fts_count > 0 :
+      ret.append('Long queries detected using full table scan, please check %d'%fts_count)
+
+
+    # Make degrag scripts:
+    dst_dir = os.path.join(self.script_dumpdir,'stats_files')
+    try :
+      os.mkdir(dst_dir)
+    except :
+      pass
+    self.build_defrag_script(reclaimable_treshold=50, max_parallel=4, estimate_percent=60, output_dir=dst_dir)
+    self.build_stats_script(self.check_statistics_days, max_parallel=4, estimate_percent=60, output_dir=dst_dir, op='gather')
+
+    return(ret)
+
+#######################################################################################################################
+  def ve_sqltxt(self,sql_id:str, position:int, dst_dir:str='', dump_only_if_fts:bool=True) -> dict :
+    '''
+    Fetch a SQL text from the database
+
+    Returns :
+      dict -> { 'hash_value' : '', 'sqltxt' : '', 'plan' : [] }
+    '''
+    ret = { 'hash_value' : '', 'sqltxt' : '', 'plan' : [], 'has_fts' : False }
+    database_name = self.database_name(position)
+
+    if len(dst_dir) > 0 :
+      dst_plan = os.path.join(dst_dir,'%s_%s_plan.txt'%(database_name,sql_id))
+      dst_txt = os.path.join(dst_dir,'%s_%s_txt.sql'%(database_name,sql_id))
+      if os.path.exists(dst_plan) and os.path.exists(dst_txt) :
+        return(ret)
+
+    rpl = [ [ 'PQ_SQLID', sql_id ] ]
+    query_str = self.load_sqlfile(os.path.join(self.query_dir,'ve_sqltxt.sql'),
+                                  notdefined=True, specific_replacements=rpl)
+
+    for _, row in self.get_remote_query('', query_string=query_str, specific_pos = position) :
+      ret['hash_value'], ret['sqltxt']  = row[0], row[1]
+
+    if len(ret['hash_value']) > 0 :
+      rpl = [[ 'PQ_HASH_VALUE', ret['hash_value']]]
+      query_str = self.load_sqlfile(os.path.join(self.query_dir,'ve_plan.sql'),
+                                    notdefined=True, specific_replacements=rpl)
+      for _, ( oid, parent_id, operation, object_name, byts, rows, cost ) \
+          in self.get_remote_query('', query_string=query_str, specific_pos = position) :
+        dct = { 'id' : oid, 'parent_id' : parent_id, 'operation' : operation, 'object_name' : object_name,
+                'bytes' : byts, 'rows' : rows, 'cost' : cost }
+        ret['plan'].append(dct)
+
+    if len(dst_dir) > 0 :
+      ret['has_fts'] = True if any([ True if "FULL" in l['operation'] else False for l in ret['plan'] ]) else False
+
+      if dump_only_if_fts and ret['has_fts'] or ( not dump_only_if_fts ) :
+        dst_plan = os.path.join(dst_dir,'%s_%s_plan.txt'%(database_name,sql_id))
+        dst_txt = os.path.join(dst_dir,'%s_%s_txt.sql'%(database_name,sql_id))
+        if not os.path.exists(dst_plan) :
+          with open(dst_plan, 'a+') as fptr :
+            json.dump(ret['plan'],fptr)
+        if not os.path.exists(dst_txt)  :
+          with open(dst_txt, 'a+') as fptr :
+            fptr.writelines(ret['sqltxt'])
+
+    return(ret)
 
 #######################################################################################################################
   def build_stats_script(self, days:int, tables:list=[],  max_parallel:int=4, estimate_percent:int=60, \
@@ -450,9 +331,6 @@ class collector() :
             except :
               ret[con_seq][tbs['owner']] = { tbs['table_name'] : to_add }
 
-      if len(output_dir) > 0 :
-        self.write_ret_into_sqlfile(output_dir,ret,mode='w+')
-
     else :
       ret['__none__'] = {}
       for tbs in tables :
@@ -460,6 +338,18 @@ class collector() :
           ret['__none__'][tbs[0]][tbs[1]] = __make_list__(tbs[0],op,tbs[1],estimate_percent,max_parallel)
         except :
           ret['__none__'][tbs[0]] = { tbs[1] : __make_list__(tbs[0],op,tbs[1],estimate_percent,max_parallel) }
+
+    if len(output_dir) > 0 :
+      for con_seq, usr_data in ret.items() :
+        db_name = self.database_name(con_seq)
+        for usr, tables in usr_data.items() :
+          for table, script in tables.items() :
+            output_file = os.path.join(output_dir, '%s_%s_%s_stats.sql'%(db_name,usr,table))
+            if not os.path.exists(output_file) :
+              with open(output_file, 'w+') as fptr :
+                for c in script :
+                  if len(c) > 0 :
+                    fptr.write('%s;\n'%c)
     return(ret)
 
 
@@ -502,22 +392,32 @@ class collector() :
         except :
           # No index on on this table ( weird )
           pass
+        # Append table to the list of tables that will go through stats gather
         to_stats.append([table_data['owner'],table_data['table_name']])
 
-        to_add = [ 'alter table %s.%s enable row movement'%(table_data['owner'],table_data['table_name']), \
-                   'alter table %s.%s shrink space cascade'%(table_data['owner'],table_data['table_name']), \
-                   'alter table %s.%s deallocate unused space'%(table_data['owner'],table_data['table_name']) ]
-        ret[con]['pre_stats'] += to_add
-        ret[con]['pos_stats'] += [ 'ALTER TABLE %s.%s DISABLE ROW MOVEMENT'%(table_data['owner'],table_data['table_name']) ]
+        # Inject actions prior statistics
+        rpl = [ [ 'TABLE_OWNER.TABLE_NAME', '%s.%s'%(table_data['owner'],table_data['table_name']) ]]
+        ret[con]['pre_stats'] += self.load_sqlfile(os.path.join(self.query_dir,'alter_tbl_pre_stats.sql'),
+                                                   notdefined=True, specific_replacements=rpl).split('\n')
+
+        # Inject actions after statistics
+        ret[con]['pos_stats'] += self.load_sqlfile(os.path.join(self.query_dir,'alter_tbl_pos_stats.sql'),
+                                                   notdefined=True, specific_replacements=rpl).split('\n')
 
       for tables in self.build_stats_script(-1, tables=to_stats, max_parallel=max_parallel, estimate_percent=estimate_percent)['__none__'].values() :
         for cmds in tables.values() :
           ret[con]['stats'] += cmds
 
-
-
     if len(output_dir) > 0 :
-      self.write_ret_into_sqlfile(output_dir,ret,mode='w+')
+      for con_seq,stats in ret.items() :
+        db_name = self.database_name(con_seq)
+        for st in [ 'stats', 'pre_stats', 'pos_stats'] :
+          output_file = os.path.join(output_dir, '%s_%s.sql'%(db_name,st))
+          if not os.path.exists(output_file) :
+            with open(output_file, 'w+') as fptr :
+              for c in stats[st] :
+                if len(c) > 0 :
+                  fptr.write('%s;\n'%c)
 
     return(ret)
 
@@ -539,6 +439,37 @@ class collector() :
     return(ret)
 
 #######################################################################################################################
+  def ve_sql_monitor(self, from_cache:bool=True) :
+    '''
+    Get top queries running on the system
+
+    Returns:
+        dict { con_seq : { 'top_queries' : [],
+                           'current'     : [ { 'status', 'username', 'sid', 'module',
+                                               'service_name', 'sql_id', 'tot_time' } ]
+                         }
+             }
+    '''
+    ret = {}
+    top = self.__standard_query__('ve_sql_top_200.sql', from_cache=from_cache)
+    query_mon = self.__standard_query__('ve_sql_monitor.sql', from_cache=from_cache)
+
+    for con_seq,con_data in top.items() :
+      if con_seq not in ret:
+        ret[con_seq] = { 'top_queries' : [], 'current' : [] }
+      for data in con_data :
+        if data['sql_id'] not in ret[con_seq]['top_queries'] :
+          ret[con_seq]['top_queries'].append(data['sql_id'])
+
+    for con_seq,con_data in query_mon.items() :
+      if con_seq not in ret :
+        ret[con_seq] = { 'top_queries' : [] }
+      ret[con_seq]['current'] = con_data
+
+    return(ret)
+
+
+#######################################################################################################################
   def ve_with_work(self, from_cache:bool=True) :
     '''
     Get queries with longops and it's current statu within the database
@@ -551,15 +482,15 @@ class collector() :
     with_work = self.__standard_query__('ve_with_work.sql', from_cache=from_cache)
     instance_info = self.ve_instance_info(from_cache=from_cache)
 
-    for con_seq,con_data in with_work.items() :
+    for con_seq,con_data in  self.__standard_query__('ve_with_work.sql', from_cache=from_cache).items() :
       for data in con_data :
         dct = {
-            'server' : instance_info[con_seq][con_data['inst_id']]['hostname'],
-            'inst_name' : instance_info[con_seq][con_data['inst_id']]['name'],
-            'user' : con_data['usr'],              'session_id' : con_data['sid'],
-            'pct_completed' : con_data['pct'],     'runtime' : con_data['runtime'],
-            'hash_value' : con_data['hash_value'], 'sql_id' : con_data['sql_id'],
-            'sqltext' : con_data['sqltext'] }
+            'server' : instance_info[con_seq][data['inst_id']]['hostname'],
+            'inst_name' : instance_info[con_seq][data['inst_id']]['name'],
+            'user' : data['usr'],              'session_id' : data['sid'],
+            'pct_completed' : data['pct'],     'runtime' : data['runtime'],
+            'hash_value' : data['hash_value'], 'sql_id' : data['sql_id'],
+            'sqltext' : data['sqltext'] }
         try :
           ret[con_seq].append(dct)
         except :
@@ -790,64 +721,3 @@ class collector() :
 
       self.__add_cache__('ve_wait_event.sql', ret)
     return(ret)
-
-
-#######################################################################################################################
-  def get_remote_query(self,query_file:str='', connection_retry_count:int = 2, strip_strings:bool=True) -> tuple :
-    '''
-    Load one of the query files listed at self.queries and return it's result in a list for each connectio
-      stablished within the class
-
-    Parameters:
-        query_file : str -> query file to be loaded ( the query file must be present at self.queries before use )
-        connection_retry_count : int -> Amount of times try to reconnect to the remote database
-          in order to execute the query
-        strip_strings : bool -> [True,False] Oracle  has a weird behavior of put spaces at end end beging of the string,
-                        this will strip them out
-
-    Returns:
-      tuple with results
-        1st element is the connection position ( relative to self.remote_conns)
-        2nd element is a row with data
-    '''
-    conn_error, conn_ok = [], []
-    outer_retry_count:int = 0
-
-    for attempts in range(connection_retry_count) :
-      for position in range(len(self.__remote_connections__)) :
-        if position in conn_error :
-          self.remote_close(position)
-          if self.remote_connect(position) :
-            conn_error.pop(position)
-        if position not in conn_error and self.__remote_connections__[position] :
-          with self.__remote_connections__[position].cursor() as cur :
-            try :
-              cur.execute(self.load_sqlfile(query_file))
-              inner_retry_count:int = 0
-              while True :
-                try :
-                  if inner_retry_count < self.monitor_sample :
-                    for row in cur.fetchmany(self.monitor_sample) :
-                      try :
-                        if not strip_strings :
-                          yield((position, row ))
-                        else :
-                          yield((position, [ i.strip() if isinstance(i,str) else i for i in row ] ))
-                      except :
-                        break
-                    else :
-                      inner_retry_count += 1
-                  else :
-                    break
-                except :
-                  break
-              conn_ok.append(position)
-            except :
-              conn_error.append(position)
-      if len(conn_error) > 0 :
-        conn_error = list(set(conn_error))
-      else :
-        break
-
-
-#######################################################################################################################

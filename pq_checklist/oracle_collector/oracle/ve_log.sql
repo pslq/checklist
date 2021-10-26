@@ -10,4 +10,4 @@ select
   STATUS,
   FIRST_TIME,
   NEXT_TIME
-from GV$LOG;
+from GV$LOG
