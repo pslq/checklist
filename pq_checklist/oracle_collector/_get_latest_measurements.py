@@ -8,8 +8,9 @@ def get_latest_measurements(self, debug=False, update_from_system:bool = True) :
   active_sessions = self.ve_active_sessions()      # OK
   temp_usage = self.__standard_query__('ve_temp_usage.sql') # OK
   object_count = self.ve_user_object_count()       # OK
-  wait_events = self.ve_wait_events()              # OK
   queries_with_pending_work = self.ve_with_work()  # OK
+  instance_info = self.ve_instance_info()
+
 
   # Measure logswitches
   for ldb,ldb_info in self.ve_log().items() :
@@ -61,11 +62,16 @@ def get_latest_measurements(self, debug=False, update_from_system:bool = True) :
         'time' : current_time })
 
   # Measure wait events
-  for con_seq, events in wait_events.items() :
-    for event in events :
+  for con_seq, events in self.ve_wait_events(metrics = [ 'system_wait_events' ]).items() :
+    database_name = self.database_name(con_seq)
+    for event in events['system_wait_events'] :
+      server = instance_info[con_seq][event['inst_id']]['hostname']
+      instance_name = instance_info[con_seq][event['inst_id']]['name']
+
       ret.append({'measurement' : 'oracle_wait_events',
-        'tags' : { 'server' : event['server'] , 'instance' : event['inst_name'], 'event' : event['event'] },
-        'fields' : { 'count' : event['count'] },
+        'tags' : { 'server' : server , 'instance' : instance_name, 'wait_class' : event['wait_class'] },
+        'fields' : { 'total_waits' : event['total_waits'], 'time_waited' : event['time_waited'],
+                     'total_waits_fg' : event['total_waits_fg'], 'time_waited_fg' : event['time_waited_fg'] },
         'time' : current_time })
 
   # queries from monitor

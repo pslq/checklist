@@ -543,57 +543,29 @@ class collector(OracleConnection) :
 
 
 #######################################################################################################################
-  def ve_wait_hist(self, from_cache=True) -> dict :
-    '''
-    '''
-    ret = {}
-    tmp_ret = self.__get_cache__('ve_wait_hist.sql')
-    if tmp_ret and from_cache:
-      ret = tmp_ret
-    else :
-      instance_info = self.ve_instance_info()
-      for con_seq, ( inst_id, SQL_ID, SESSION_ID, USERNAME, module, program, machine, SESSION_STATE,time_waited, cnt, \
-          event, PGA_ALLOCATED, TEMP_SPACE_ALLOCATED ) \
-        in self.get_remote_query('ve_wait_hist.sql') :
-
-        hostname, inst_name   = instance_info[con_seq][inst_id]['hostname'], instance_info[con_seq][inst_id]['name']
-        dct = { 'server' : hostname, 'inst_name' : inst_name,
-            'SQL_ID' : SQL_ID, 'SESSION_ID' : SESSION_ID, 'USERNAME' : USERNAME, 'module' : module,
-            'program' : program, 'machine' : machine, 'SESSION_STATE' : SESSION_STATE, 'time_waited' : time_waited ,
-            'cnt' : cnt, 'event': event, 'PGA_ALLOCATED' : PGA_ALLOCATED, 'TEMP_SPACE_ALLOCATED' : TEMP_SPACE_ALLOCATED }
-        try :
-          ret[con_seq].append(dct)
-        except :
-          ret[con_seq] = [ dct ]
-      self.__add_cache__('ve_wait_hist.sql', ret)
-    return(ret)
-
-#######################################################################################################################
-  def ve_wait_events(self, from_cache=True) -> dict:
+  def ve_wait_events(self, metrics = [ 'session_wait_event_history', 'system_wait_events', 'system_wait_history' ],  from_cache=True) -> dict:
     '''
     Get current wait events on the database instances
 
     Returns :
       dict ->
-        { con_sequence : [ { server,inst_name,event,event_class,count } ]
+        { con_sequence : { 'session_wait_event' : [], 'wait_hist' : [], 'system_waits' : [] }}'
     '''
     ret = {}
 
-    tmp_ret = self.__get_cache__('ve_wait_event.sql')
-    if tmp_ret and from_cache:
-      ret = tmp_ret
-    else :
-      instance_info = self.ve_instance_info()
-      for evt in self.get_remote_query('ve_wait_event.sql') :
-        con_seq, (inst_id, event, WAIT_CLASS, sample_count) = evt
-        hostname   = instance_info[con_seq][inst_id]['hostname']
-        inst_name  = instance_info[con_seq][inst_id]['name']
-        dct = {'server' : hostname, 'inst_name' : inst_name, 'event' : event, 'class' : WAIT_CLASS,
-               'count' : sample_count}
-        try :
-          ret[con_seq].append(dct)
-        except :
-          ret[con_seq] = [ dct ]
+    for i in range(len(self.__remote_connections__)) :
+      ret[i] = { 'session_wait_event_history' : [], 'system_wait_events' : [], 'system_wait_history' : []}
 
-      self.__add_cache__('ve_wait_event.sql', ret)
+    if 'session_wait_event_history' in metrics :
+      for con_seq, evts in self.__standard_query__('ve_session_wait_hist.sql', from_cache=from_cache).items() :
+        ret[con_seq]['session_wait_event_history'] = evts
+
+    if 'system_wait_events' in metrics :
+      for con_seq, evts in self.__standard_query__('ve_system_wait_class.sql', from_cache=from_cache).items() :
+        ret[con_seq]['system_wait_events'] = evts
+
+    if 'system_wait_history' in metrics :
+      for con_seq, evts in self.__standard_query__('ve_wait_hist.sql', from_cache=from_cache).items() :
+        ret[con_seq]['system_wait_history'] = evts
+
     return(ret)

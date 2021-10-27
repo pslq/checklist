@@ -38,17 +38,17 @@ class OracleConnection() :
     self.script_dumpdir          = config['ORACLE']['script_dumpdir'].strip() if 'script_dumpdir' in config['ORACLE'] else ''
 
 
-    self.queries = [ "ve_temp_usage.sql", "ve_active_sessions.sql", "ve_cons_per_user.sql",
-                     "ve_with_work.sql",  "ve_wait_event.sql", 've_instance_info.sql',   've_users_with_objets.sql',
+    self.queries = [ "ve_temp_usage.sql", "ve_active_sessions.sql", "ve_cons_per_user.sql", 've_users_with_objets.sql',
+                     "ve_with_work.sql",  "ve_session_wait_hist.sql", 've_instance_info.sql',
                      "ve_wait_hist.sql", "ve_database_info.sql", "ve_tablespace_usage.sql", "ve_table_frag.sql",
                      've_indexes.sql', 've_stats_history.sql', 've_log.sql', 've_logfile.sql', 've_loghist.sql',
-                     've_sql_top_200.sql', 've_sql_monitor.sql' ]
+                     've_sql_top_200.sql', 've_sql_monitor.sql', 've_system_wait_class.sql' ]
 
     # helper to avoid convert the list to a string that will be used within Oracle multiple times
     __PQ_NOTOWNERS_str__ = str(self.ora_users_to_ignore).replace('[','').replace(']','')
     __PQ_SECONDS_MONITOR__ = self.config['LOOP']['interval'].strip()
 
-    self.query_replacements = { 've_wait_event.sql' : [ [ 'PQ_SECONDS_MONITOR', __PQ_SECONDS_MONITOR__ ] ],
+    self.query_replacements = { 've_session_wait_hist.sql' : [ [ 'PQ_SECONDS_MONITOR', __PQ_SECONDS_MONITOR__ ] ],
                                 've_wait_hist.sql'  : [ [ 'PQ_SECONDS_MONITOR', __PQ_SECONDS_MONITOR__ ] ],
                                 've_indexes.sql'    : [ [ 'PQ_NOTOWNERS',       __PQ_NOTOWNERS_str__ ]],
                                 've_table_frag.sql' : [ [ 'PQ_NOTOWNERS',       __PQ_NOTOWNERS_str__ ]],
@@ -56,24 +56,33 @@ class OracleConnection() :
                               }
 
     self.query_result_sequence = {
-        've_table_frag.sql'       : ( 'owner', 'table_name', 'table_size', 'actual_size',
-                                      'wasted_space', 'pct_reclaimable' ),
-        've_tablespace_usage.sql' : ( 'tablespace', 'total', 'total_physical_cap', 'free', 'free_pct' ),
-        've_temp_usage.sql'       : ( 'tablespace', 'usage' ),
-        've_with_work.sql'        : ( 'usr', 'inst_id', 'sid', 'pct', 'runtime', 'hash_value', 'sql_id', 'sqltext'),
-        've_indexes.sql'          : ( 'owner', 'index_name', 'index_type', 'table_owner', 'table_name',
-                                      'table_type','compression', 'degree', 'generated', 'visibility' ),
-        've_stats_history.sql'    : ( 'owner', 'table_name', 'stats_update_time', 'modification_time' ),
-        've_log.sql'              : ( 'inst_id', 'group', 'thread', 'sequence', 'bytes', 'blocksize',
-                                      'members', 'status', 'first_time', 'next_time' ),
-        've_logfile.sql'          : ( 'inst_id', 'group', 'status', 'type', 'member', 'is_recovery_dest_file' ),
-        've_loghist.sql'          : ( 'char_datetime', 'inst_id', 'count' ),
-        've_sql_top_200.sql'      : ( 'sql_id', 'tot_time' ),
-        've_sql_monitor.sql'      : ( 'status', 'username', 'sid', 'module', 'service_name', 'sql_id', 'tot_time' )
+        've_table_frag.sql'        : ( 'owner', 'table_name', 'table_size', 'actual_size',
+                                       'wasted_space', 'pct_reclaimable' ),
+        've_tablespace_usage.sql'  : ( 'tablespace', 'total', 'total_physical_cap', 'free', 'free_pct' ),
+        've_temp_usage.sql'        : ( 'tablespace', 'usage' ),
+        've_with_work.sql'         : ( 'usr', 'inst_id', 'sid', 'pct', 'runtime', 'hash_value', 'sql_id', 'sqltext'),
+        've_indexes.sql'           : ( 'owner', 'index_name', 'index_type', 'table_owner', 'table_name',
+                                       'table_type','compression', 'degree', 'generated', 'visibility' ),
+        've_stats_history.sql'     : ( 'owner', 'table_name', 'stats_update_time', 'modification_time' ),
+        've_log.sql'               : ( 'inst_id', 'group', 'thread', 'sequence', 'bytes', 'blocksize',
+                                       'members', 'status', 'first_time', 'next_time' ),
+        've_logfile.sql'           : ( 'inst_id', 'group', 'status', 'type', 'member', 'is_recovery_dest_file' ),
+        've_loghist.sql'           : ( 'char_datetime', 'inst_id', 'count' ),
+        've_sql_top_200.sql'       : ( 'sql_id', 'tot_time' ),
+        've_sql_monitor.sql'       : ( 'status', 'username', 'sid', 'module', 'service_name', 'sql_id', 'tot_time' ),
+        've_session_wait_hist.sql' : ( 'inst_id', 'event', 'wait_class', 'count' ),
+        've_system_wait_class.sql' : ( 'inst_id', 'wait_class', 'total_waits', 'time_waited', 'total_waits_fg', 'time_waited_fg' ),
+        've_wait_hist.sql'         : ( 'inst_id', 'sql_id', 'session_id', 'user', 'module', 'program', 'machine',
+                                       'session_state', 'time_waited', 'count', 'event', 'pga_allocated', 'temp_space_allocated' ),
+        've_database_info.sql'     : ( 'inst_id', 'name', 'log_mode', 'controlfile_type', 'open_resetlogs', 'open_mode',
+                                       'protection_mode', 'protection_level', 'remote_archive', 'database_role',
+                                       'platform_id', 'platform_name')
+
+
     }
 
 
-    self.query_cache_results = pq_cache(logger = self.logger)
+    self.query_cache_results = pq_cache(logger = self.logger, qlen=64)
 
     self.__remote_connections__ = [ ]
 
@@ -108,7 +117,7 @@ class OracleConnection() :
     '''
     Close all connections
     '''
-    for i in self.remote_conns :
+    for i in self.__remote_connections__ :
       if i :
         i.close()
     return(None)
@@ -184,7 +193,7 @@ class OracleConnection() :
     return(self.query_cache_results.add(query_id, ( time.time(), data ), overwrite_value=True))
 
 #######################################################################################################################
-  def __standard_query__(self,query_id:str, from_cache:bool = True, expires:int=10) -> dict:
+  def __standard_query__(self,query_id:str, from_cache:bool = True, expires:int=10, print_data:bool=False) -> dict:
     '''
     Process a query_id, return it's data in a dict format and store into cache
     '''
@@ -194,6 +203,8 @@ class OracleConnection() :
       ret = tmp_ret
     else :
       for con_seq, row in self.get_remote_query(query_id) :
+        if print_data :
+          print(con_seq, row)
         dct = {}
         for p,k in enumerate(self.query_result_sequence[query_id]) :
           dct[k] = row[p]
@@ -272,8 +283,7 @@ class OracleConnection() :
         1st element is the connection position ( relative to self.remote_conns)
         2nd element is a row with data
     '''
-    conn_error, conn_ok = [], []
-    outer_retry_count:int = 0
+    all_ok = []
     query_to_execue = ''
     if len(query_file) > 0 :
       query_to_execue = self.load_sqlfile(query_file)
@@ -282,42 +292,22 @@ class OracleConnection() :
 
     if len(query_to_execue) > 0 :
       for attempts in range(connection_retry_count) :
-        for position in range(len(self.__remote_connections__)) if int(specific_pos) > -1 else [ specific_pos ] :
-          if position in conn_error :
-            self.remote_close(position)
-            if self.remote_connect(position) :
-              conn_error.pop(position)
-          if position not in conn_error and self.__remote_connections__[position] :
-            with self.__remote_connections__[position].cursor() as cur :
-              try :
-                cur.execute(query_to_execue)
-                inner_retry_count:int = 0
-                while True :
+        for position in range(len(self.__remote_connections__)) if int(specific_pos) == -1 else [ specific_pos ] :
+          if position not in all_ok :
+            try :
+              if not self.__remote_connections__[position].ping() :
+                with self.__remote_connections__[position].cursor() as cur :
                   try :
-                    if inner_retry_count < self.monitor_sample :
-                      for row in cur.fetchmany(self.monitor_sample) :
-                        try :
-                          if not strip_strings :
-                            yield((position, row ))
-                          else :
-                            yield((position, [ i.strip() if isinstance(i,str) else i for i in row ] ))
-                        except :
-                          break
+                    for row in cur.execute(query_to_execue) :
+                      if not strip_strings :
+                        yield((position, row ))
                       else :
-                        inner_retry_count += 1
-                    else :
-                      break
-                  except :
-                    break
-                conn_ok.append(position)
-              except Exception as e :
-                debug_post_msg(self.logger,'Error on connection %d : %s'%(position,e))
-                conn_error.append(position)
-        if len(conn_error) > 0 :
-          conn_error = list(set(conn_error))
-        else :
-          break
-  #######################################################################################################################
-
-
-
+                        yield((position, [ i.strip() if isinstance(i,str) else i for i in row ] ))
+                    all_ok.append(position)
+                  except Exception as e :
+                    debug_post_msg(self.logger,'Error executing cursor for %d : %s'%(position,e))
+            except Exception as e :
+              debug_post_msg(self.logger,'Error pinging connection %d : %s'%(position,e))
+              self.remote_close(position)
+              self.remote_connect(position)
+#######################################################################################################################
