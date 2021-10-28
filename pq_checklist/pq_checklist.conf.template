@@ -26,6 +26,8 @@ collectors = [ 'net', 'cpu', 'oracle' ]
 [LOOP]
 # Interval between the collections
 interval = 60
+# after how many  collection cycles will run a HC
+hc_loop_count = 10
 
 [LOG]
 # Valid entries: INFO / DEBUG

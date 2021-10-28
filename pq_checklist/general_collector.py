@@ -19,9 +19,19 @@ def loop(config_file) :
     else :
       config,logger = get_config(log_start=False)
 
+    hc_loop_count_from_config = int(config['LOOP']['hc_loop_count'])
+    hc_loop_count = 1
+    interval = int(config['LOOP']['interval'])
+
     while True :
-      collector(config = config, logger = logger).collect_all()
-      time.sleep(int(config['LOOP']['interval']))
+      if hc_loop_count == hc_loop_count_from_config :
+        collector(config = config, logger = logger).collect_all(get_hc=True)
+        hc_loop_count = 1
+      else :
+        collector(config = config, logger = logger).collect_all(get_hc=False)
+        hc_loop_count += 1
+
+      time.sleep(interval)
     return(None)
 
   # Main function body
@@ -37,7 +47,7 @@ class collector(Base_collector) :
 
 
 #######################################################################################################################
-  def collect_all(self, debug=False) -> None:
+  def collect_all(self, debug=False, get_hc:bool = True) -> None:
     '''
     Main function that consolidate all data from collectors
     '''
@@ -60,7 +70,7 @@ class collector(Base_collector) :
       for measurement_povider in self.collectors[hosts].values() :
         data += measurement_povider.get_latest_measurements(debug = debug, update_from_system=update_data_on_measurement)
         # Get Health Check routines and send to syslog
-        if self.healthcheck :
+        if self.healthcheck and get_hc :
           for msg in measurement_povider.health_check(update_from_system=update_data_on_measurement) :
             debug_post_msg(self.logger,'MGS FROM %s : %s'%(hosts,msg))
 
