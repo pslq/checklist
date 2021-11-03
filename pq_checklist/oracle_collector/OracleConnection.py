@@ -1,8 +1,76 @@
-import cx_Oracle
 from .. import debug_post_msg
 from ..cache import pq_cache
 import importlib, datetime, os.path, time, os, json
 from ast import literal_eval
+
+import multiprocessing as mp
+
+
+def __pq_connection_queue_handler__(dsn,user,password,mode,encoding,retry_count,input_queue,output_queue) :
+  import cx_Oracle
+  conn = None
+  ret = 0
+
+  if input_queue and output_queue :
+    try :
+      conn = cx_Oracle.connect(user=user,password=password, dsn=dsn, mode=mode, encoding=encoding)
+      while True :
+        output_data = (None,None,None)
+
+        cmd = input_queue.get()
+        if not cmd :
+          break
+        else :
+          try :
+            if cmd[0] == 'close' :
+              if conn :
+                conn.close()
+            if cmd[0] == 'query' : # ( operation, sql_query, max_rows_to_return )
+              all_done = False
+              ret_rows = []
+              all_rows = True
+              for _ in range(retry_count) :
+                if not all_done :
+                  try :
+                    if not conn.ping() :
+                      with conn.cursor() as cur :
+                        try :
+                          for p,row in enumerate(cur.execute(cmd[1])) :
+                            if p < cmd[2]:
+                              ret_rows.append([ i.strip() if isinstance(i,str) else i for i in row ])
+                            else :
+                              all_rows = False
+                              break
+                          all_done = True
+                          break
+                        except Exception as e :
+                          debug_post_msg(None, 'Oracle Error when executing cursor for %s : %s'%(dsn,e), screen_only=True)
+                          debug_post_msg(None, 'Oracle query being executed %s'%(cmd[1]), screen_only=True)
+                          if conn :
+                            conn.close()
+                          conn = cx_Oracle.connect(user=user,password=password, dsn=dsn, mode=mode, encoding=encoding)
+                    else :
+                      if conn :
+                        conn.close()
+                      conn = cx_Oracle.connect(user=user,password=password, dsn=dsn, mode=mode, encoding=encoding)
+                  except Exception as e :
+                    debug_post_msg(None, 'Oracle Error for %s : %s'%(dsn,e), screen_only=True)
+                    if conn :
+                      conn.close()
+                    conn = cx_Oracle.connect(user=user,password=password, dsn=dsn, mode=mode, encoding=encoding)
+              output_data = (ret_rows,all_rows,all_done)
+          except Exception as e :
+            debug_post_msg(None, 'Oracle error on command loop %s : %s'%(dsn,e), screen_only=True)
+            ret = 254
+            break
+        output_queue.put(output_data)
+      if conn :
+        conn.close()
+        ret = 0
+    except Exception as e :
+      debug_post_msg(None, 'Oracle error opening initial connection for %s : %s'%(dsn,e), screen_only=True)
+      ret = 255
+  return(ret)
 
 
 class OracleConnection() :
@@ -18,7 +86,6 @@ class OracleConnection() :
     self.query_dir      = os.path.join(os.path.dirname(os.path.abspath(__file__)),"oracle")
     self.nodename       = os.uname().nodename
     self.only_on_localhost = False
-    self.monitor_sample = 200
     self.ora_users_to_ignore        = literal_eval(config['ORACLE']['ora_users_to_ignore']) if 'ora_users_to_ignore' in config['ORACLE'] else []
     self.check_statistics_days      = int(config['ORACLE']['check_statistics_days']) if 'check_statistics_days' in config['ORACLE'] else -1
     self.log_switches_hour_alert    = int(config['ORACLE']['log_switches_hour_alert']) if 'log_switches_hour_alert' in config['ORACLE'] else -1
@@ -76,15 +143,17 @@ class OracleConnection() :
                                        'session_state', 'time_waited', 'count', 'event', 'pga_allocated', 'temp_space_allocated' ),
         've_database_info.sql'     : ( 'inst_id', 'name', 'log_mode', 'controlfile_type', 'open_resetlogs', 'open_mode',
                                        'protection_mode', 'protection_level', 'remote_archive', 'database_role',
-                                       'platform_id', 'platform_name')
+                                       'platform_id', 'platform_name'),
+        've_users_with_objets.sql' : ( 'owner','status','count' ),
+        've_instance_info.sql'     : ( 'id', 'number', 'name', 'hostname', 'status', 'parallel', 'thread', 'archiver',
+                                       'log_switch', 'logins', 'state', 'edition', 'type' ),
+        've_active_sessions.sql'   : ( 'user', 'status', 'lockwait', 'cmd', 'session_id', 'serial', 'inst_id', 'hash_value', 'sql_id', 'sqltext' )
 
 
     }
 
 
     self.query_cache_results = pq_cache(logger = self.logger, qlen=64)
-
-    self.__remote_connections__ = [ ]
 
     if self.conn_type != "none" :
       self.conn_data      = {}
@@ -109,6 +178,8 @@ class OracleConnection() :
       self.__remote_connections__ = [ None for i in range(len(self.conn_data['ora_user'])) ]
       self.remote_connectall()
       self.only_on_localhost = True
+    else :
+      self.__remote_connections__ = [ ]
 
     return(None)
 
@@ -128,7 +199,11 @@ class OracleConnection() :
     '''
     if len(self.__remote_connections__) >= position :
       if self.__remote_connections__[position] :
-        self.__remote_connections__[position].close()
+        if 'conn' in self.__remote_connections__[position] :
+          self.__remote_connections__[position]['in'].put(['close',None])
+          self.__remote_connections__[position]['in'].join()
+          self.__remote_connections__[position]['conn'].join()
+          self.__remote_connections__[position]['conn'].terminate()
     return(None)
 
   #######################################################################################################################
@@ -153,11 +228,14 @@ class OracleConnection() :
     '''
     ret = None
     try :
-      self.__remote_connections__[position] = cx_Oracle.connect(user=self.conn_data['ora_user'][position],
-                                                        password=self.conn_data['ora_pass'][position],
-                                                        dsn=self.conn_data['ora_dsn'][position],
-                                                        mode=self.conn_data['ora_role'][position], encoding="UTF-8")
-      ret = self.__remote_connections__[position]
+      dct = { 'in' : mp.Queue(), 'out' : mp.Queue(), 'conn' : None }
+      l_proc = mp.Process(target=__pq_connection_queue_handler__, args=(
+        self.conn_data['ora_dsn'][position],self.conn_data['ora_user'][position],
+        self.conn_data['ora_pass'][position],self.conn_data['ora_role'][position],"UTF-8",3,dct['in'],dct['out'],))
+      dct['conn'] = l_proc
+      dct['conn'].start()
+
+      self.__remote_connections__[position] = dct
     except Exception as e :
       debug_post_msg(self.logger,'Oracle client error connecting to position %d : %s'%(position,str(e)))
     return(ret)
@@ -192,28 +270,6 @@ class OracleConnection() :
     '''
     return(self.query_cache_results.add(query_id, ( time.time(), data ), overwrite_value=True))
 
-#######################################################################################################################
-  def __standard_query__(self,query_id:str, from_cache:bool = True, expires:int=10, print_data:bool=False) -> dict:
-    '''
-    Process a query_id, return it's data in a dict format and store into cache
-    '''
-    ret = {}
-    tmp_ret = self.__get_cache__(query_id, expires=expires)
-    if tmp_ret and from_cache :
-      ret = tmp_ret
-    else :
-      for con_seq, row in self.get_remote_query(query_id) :
-        if print_data :
-          print(con_seq, row)
-        dct = {}
-        for p,k in enumerate(self.query_result_sequence[query_id]) :
-          dct[k] = row[p]
-        try :
-          ret[con_seq].append(dct)
-        except :
-          ret[con_seq] = [ dct ]
-      self.__add_cache__(query_id,ret)
-    return(ret)
 
 #######################################################################################################################
   def load_sqlfile(self, query_file:str, notdefined:bool=False, specific_replacements:list=[]) -> str:
@@ -264,7 +320,8 @@ class OracleConnection() :
 
   #######################################################################################################################
   def get_remote_query(self,query_file:str='', connection_retry_count:int = 2, strip_strings:bool=True, \
-      query_string:str='', specific_pos = -1) -> tuple :
+                            query_string:str='', specific_pos = -1, as_dict:bool=True, rows_limit:int=10000, \
+                            from_cache:bool = True, expires:int=10) -> tuple :
     '''
     Load one of the query files listed at self.queries and return it's result in a list for each connectio
       stablished within the class
@@ -277,37 +334,46 @@ class OracleConnection() :
         strip_strings : bool -> [True,False] Oracle  has a weird behavior of put spaces at end end beging of the string,
                         this will strip them out
         specific_pos : execute query only on a specific connection
+        as_dict : yield query results as a dict
+        rows_limit : maximum amount of rows to return
 
     Returns:
-      tuple with results
-        1st element is the connection position ( relative to self.remote_conns)
-        2nd element is a row with data
+      dict { position : { data : [dct,row], all_rows : bool, all_done : bool} }
+       position   : the connection position ( relative to self.remote_conns)
+       [dct,row]  : either a dict or a tuple with data
+       all_rows   : If all rows will be returned or if the data stream will be breach after rows_limit is reached
+       all_done   : If the data fetch process finished OK
     '''
-    all_ok = []
+    ret = None
     query_to_execue = ''
     if len(query_file) > 0 :
       query_to_execue = self.load_sqlfile(query_file)
+      if as_dict and not query_file in self.query_result_sequence :
+        as_dict = False
+      if from_cache :
+        ret = self.__get_cache__(query_file, expires=expires)
     elif len(query_string) > 0 :
       query_to_execue = query_string
 
-    if len(query_to_execue) > 0 :
-      for attempts in range(connection_retry_count) :
-        for position in range(len(self.__remote_connections__)) if int(specific_pos) == -1 else [ specific_pos ] :
-          if position not in all_ok :
-            try :
-              if not self.__remote_connections__[position].ping() :
-                with self.__remote_connections__[position].cursor() as cur :
-                  try :
-                    for row in cur.execute(query_to_execue) :
-                      if not strip_strings :
-                        yield((position, row ))
-                      else :
-                        yield((position, [ i.strip() if isinstance(i,str) else i for i in row ] ))
-                    all_ok.append(position)
-                  except Exception as e :
-                    debug_post_msg(self.logger,'Error executing cursor for %d : %s'%(position,e))
-            except Exception as e :
-              debug_post_msg(self.logger,'Error pinging connection %d : %s'%(position,e))
-              self.remote_close(position)
-              self.remote_connect(position)
+    if len(query_to_execue) > 0 and not ret :
+      ret = {}
+      ranged_val = range(len(self.__remote_connections__)) if int(specific_pos) == -1 else [ specific_pos ]
+      for position in ranged_val :
+        if self.__remote_connections__[position] :
+          if 'conn' in self.__remote_connections__[position] :
+            self.__remote_connections__[position]['in'].put(('query',query_to_execue,rows_limit))
+      for position in reversed(ranged_val) :
+        ret[position] = { 'data' : [], 'all_done' : True, 'all_rows' : True }
+        out_data = self.__remote_connections__[position]['out'].get()
+        for row in out_data[0] :
+          if as_dict :
+            ret[position]['data'].append({ k:v for k,v in zip(self.query_result_sequence[query_file],row) })
+          else :
+            ret[position]['data'].append(row)
+          ret[position]['all_done'],ret[position]['all_rows'] = out_data[2],out_data[1]
+
+    if len(query_file) > 0 and from_cache :
+      self.__add_cache__(query_file,ret)
+    return(ret)
+
 #######################################################################################################################

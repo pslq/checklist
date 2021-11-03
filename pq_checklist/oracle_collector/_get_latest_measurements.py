@@ -5,23 +5,21 @@ def get_latest_measurements(self, debug=False, update_from_system:bool = True) :
 
   ret = []
   current_time = datetime.datetime.utcnow().isoformat()
-  active_sessions = self.ve_active_sessions()      # OK
-  temp_usage = self.__standard_query__('ve_temp_usage.sql') # OK
-  object_count = self.ve_user_object_count()       # OK
-  queries_with_pending_work = self.ve_with_work()  # OK
   instance_info = self.ve_instance_info()
 
 
   # Measure logswitches
-  for ldb,ldb_info in self.ve_log().items() :
-    for instance,instance_data in ldb_info.items() :
+  for con_seq,data in self.ve_log(fields=['log_switches']).items() :
+    dbname = self.database_name(con_seq)
+    for instance,instance_data in data.items() :
+      instance_name = instance_info[con_seq][instance]['name']
       for lswitch in instance_data['log_switches'] :
         lkh = lswitch['datetime'] - datetime.timedelta(minutes=lswitch['datetime'].minute) # hour
         lkm = lswitch['datetime'].isoformat()
         ret.append({
               'measurement' : 'oracle_logswitches',
-              'tags' : { 'database' : ldb },
-              'fields' : { instance : lswitch['count'] },
+              'tags' : { 'database' : dbname },
+              'fields' : { instance_name : lswitch['count'] },
               'time' :  lkm })
 
   # Measure stale stats
@@ -36,9 +34,9 @@ def get_latest_measurements(self, debug=False, update_from_system:bool = True) :
 
 
   # Measure tablespace
-  for con_seq, tbs_data in self.__standard_query__('ve_tablespace_usage.sql').items() :
+  for con_seq, tbs_data in self.get_remote_query('ve_tablespace_usage.sql').items() :
     database_name = self.database_name(con_seq)
-    for tbs in tbs_data :
+    for tbs in tbs_data['data'] :
       ret.append({
         'measurement' : 'oracle_tablespaces',
         'tags' : { 'database' : database_name, 'tablespace' : tbs['tablespace'] },
@@ -50,8 +48,7 @@ def get_latest_measurements(self, debug=False, update_from_system:bool = True) :
 
 
   # Measure longops
-  for con_seq, longops in queries_with_pending_work.items() :
-    me = {}
+  for con_seq, longops in self.ve_with_work().items() :
     database_name = self.database_name(con_seq)
     for lgop in longops :
       srv,inst,usr = lgop['server'], lgop['inst_name'], lgop['user']
@@ -69,13 +66,13 @@ def get_latest_measurements(self, debug=False, update_from_system:bool = True) :
       instance_name = instance_info[con_seq][event['inst_id']]['name']
 
       ret.append({'measurement' : 'oracle_wait_events',
-        'tags' : { 'server' : server , 'instance' : instance_name, 'wait_class' : event['wait_class'] },
+        'tags' : { 'database' : database_name, 'server' : server , 'instance' : instance_name, 'wait_class' : event['wait_class'] },
         'fields' : { 'total_waits' : event['total_waits'], 'time_waited' : event['time_waited'],
                      'total_waits_fg' : event['total_waits_fg'], 'time_waited_fg' : event['time_waited_fg'] },
         'time' : current_time })
 
   # queries from monitor
-  for con_seq,data in self.ve_sql_monitor().items() :
+  for con_seq,data in self.ve_sql_monitor(fields=['current']).items() :
     database_name = self.database_name(con_seq)
     ret.append({'measurement' : 'oracle_running_queries',
         'tags' : { 'database' : database_name },
@@ -90,9 +87,9 @@ def get_latest_measurements(self, debug=False, update_from_system:bool = True) :
 
 
   # Measure temporary tablespace usage
-  for con_seq, tablespaces in temp_usage.items() :
+  for con_seq, tablespaces in self.get_remote_query('ve_temp_usage.sql').items() :
     database = self.database_name(con_seq)
-    for ts in tablespaces :
+    for ts in tablespaces['data'] :
       ret.append({'measurement' : 'oracle_temp_tablespaces',
                   'tags' : { 'database' : database, 'tablespace' : ts['tablespace'] },
                   'fields' : { 'usage_in_mb' : ts['usage'] }, 'time' : current_time
@@ -100,7 +97,7 @@ def get_latest_measurements(self, debug=False, update_from_system:bool = True) :
 
 
   # Measure active sessions
-  for con_seq,sessions in active_sessions.items() :
+  for con_seq,sessions in self.ve_active_sessions().items() :
     con_count = {}
     for sess in sessions :
       try :
@@ -123,7 +120,7 @@ def get_latest_measurements(self, debug=False, update_from_system:bool = True) :
                    })
 
   # Measure object per users
-  for con_seq,obj_count in object_count.items() :
+  for con_seq,obj_count in self.ve_user_object_count().items() :
     target_db = self.database_name(con_seq)
     for user,objs in obj_count.items() :
       tmp_copy = objs

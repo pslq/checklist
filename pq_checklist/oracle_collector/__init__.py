@@ -7,6 +7,7 @@ import importlib, datetime, os.path, time, os, json
 from .OracleConnection import OracleConnection
 # Local functions
 from ._get_latest_measurements import get_latest_measurements
+from ._health_check import health_check
 
 
 class collector(OracleConnection) :
@@ -26,129 +27,74 @@ class collector(OracleConnection) :
 
 #######################################################################################################################
   def health_check(self,update_from_system:bool = True) -> list :
-    '''
-    '''
-    ret = []
-
-    # Measure logswitches
-    if self.log_switches_hour_alert > 0 :
-      databases = {}
-      for ldb,ldb_info in self.ve_log().items() :
-        databases[ldb] = {}
-        for instance,instance_data in ldb_info.items() :
-          databases[ldb][instance] = {}
-          for lswitch in instance_data['log_switches'] :
-            lkh = lswitch['datetime'] - datetime.timedelta(minutes=lswitch['datetime'].minute) # hour
-            try :
-              databases[ldb][instance][lkh] += lswitch['count']
-            except :
-              databases[ldb][instance][lkh] = lswitch['count']
-      for db,data in databases.items() :
-        for instance,dates in data.items() :
-          for dt,cnt in dates.items() :
-            if cnt > self.log_switches_hour_alert :
-              ret.append('The instance %s of database %s switched logs %d times at : %s'%(instance,ldb,cnt,str(dt)))
-
-    # Placeholder to store sql_ids
-    sql_ids = {}
-    fts_count = 0
-    # Dump directory
-    dst_dir = os.path.join(self.script_dumpdir,'dumped_queries')
-
-    for con_seq, longops in self.ve_with_work().items() :
-      database_name = self.database_name(con_seq)
-      sql_ids[con_seq] = []
-      for lgop in longops :
-        sql_ids[con_seq].append(lgop['sql_id'])
-      ids = list(set(sql_ids[con_seq]))
-      sql_ids[con_seq] = ids
-      if len(ids) > 0 :
-        ret.append('The database %s has a total of %d longops happening, please check dumped queries'%(database_name,len(ids)))
-
-    if self.dump_longops :
-      try :
-        os.mkdir(dst_dir)
-      except :
-        pass
-
-      for con_seq,queries in sql_ids.items() :
-        database_name = self.database_name(con_seq)
-        for sql_id in queries :
-          fts_count += 1 if self.ve_sqltxt(sql_id, con_seq, dst_dir=dst_dir, dump_only_if_fts=True)['has_fts'] else 0
-
-    if self.dump_running_ids :
-      # queries from monitor
-      try :
-        os.mkdir(dst_dir)
-      except :
-        pass
-
-      for con_seq,data in self.ve_sql_monitor().items() :
-        database_name = self.database_name(con_seq)
-        for sql_id in data['top_queries'] :
-          fts_count += 1 if self.ve_sqltxt(sql_id, con_seq, dst_dir=dst_dir, dump_only_if_fts=True)['has_fts'] else 0
-
-    if fts_count > 0 :
-      ret.append('Long queries detected using full table scan, please check %d'%fts_count)
-
-
-    # Make degrag scripts:
-    dst_dir = os.path.join(self.script_dumpdir,'stats_files')
-    try :
-      os.mkdir(dst_dir)
-    except :
-      pass
-    self.build_defrag_script(reclaimable_treshold=50, max_parallel=4, estimate_percent=60, output_dir=dst_dir)
-    self.build_stats_script(self.check_statistics_days, max_parallel=4, estimate_percent=60, output_dir=dst_dir, op='gather')
-
-    return(ret)
+    return(health_check(self,update_from_system=update_from_system))
 
 #######################################################################################################################
-  def ve_sqltxt(self,sql_id:str, position:int, dst_dir:str='', dump_only_if_fts:bool=True) -> dict :
+  def ve_sqltxt(self,sql_id:str, position:int, dst_dir:str, dump_only_if_fts:bool, \
+                     problem_plan_limit:int = 10000) -> dict :
     '''
     Fetch a SQL text from the database
 
     Returns :
-      dict -> { 'hash_value' : '', 'sqltxt' : '', 'plan' : [] }
+      dict -> { 'hash_value' : '', 'sqltxt' : '', 'plan' : '' }
     '''
-    ret = { 'hash_value' : '', 'sqltxt' : '', 'plan' : [], 'has_fts' : False }
+    ret = { 'hash_value' : '', 'sqltxt' : '', 'plan' : [], 'has_fts' : False,
+            'problem_with_plan_analysis' : False, 'in_previous_report' : False }
     database_name = self.database_name(position)
+    dst_plan = ''
 
     if len(dst_dir) > 0 :
       dst_plan = os.path.join(dst_dir,'%s_%s_plan.txt'%(database_name,sql_id))
       dst_txt = os.path.join(dst_dir,'%s_%s_txt.sql'%(database_name,sql_id))
       if os.path.exists(dst_plan) and os.path.exists(dst_txt) :
-        return(ret)
+        ret['in_previous_report'] = True
 
-    rpl = [ [ 'PQ_SQLID', sql_id ] ]
-    query_str = self.load_sqlfile(os.path.join(self.query_dir,'ve_sqltxt.sql'),
-                                  notdefined=True, specific_replacements=rpl)
 
-    for _, row in self.get_remote_query('', query_string=query_str, specific_pos = position) :
-      ret['hash_value'], ret['sqltxt']  = row[0], row[1]
-
-    if len(ret['hash_value']) > 0 :
-      rpl = [[ 'PQ_HASH_VALUE', ret['hash_value']]]
-      query_str = self.load_sqlfile(os.path.join(self.query_dir,'ve_plan.sql'),
+    if not ret['in_previous_report'] :
+      rpl = [ [ 'PQ_SQLID', sql_id ] ]
+      query_str = self.load_sqlfile(os.path.join(self.query_dir,'ve_sqltxt.sql'),
                                     notdefined=True, specific_replacements=rpl)
-      for _, ( oid, parent_id, operation, object_name, byts, rows, cost ) \
-          in self.get_remote_query('', query_string=query_str, specific_pos = position) :
-        dct = { 'id' : oid, 'parent_id' : parent_id, 'operation' : operation, 'object_name' : object_name,
-                'bytes' : byts, 'rows' : rows, 'cost' : cost }
-        ret['plan'].append(dct)
 
-    if len(dst_dir) > 0 :
-      ret['has_fts'] = True if any([ True if "FULL" in l['operation'] else False for l in ret['plan'] ]) else False
+      for _, dt in self.get_remote_query('', query_string=query_str, specific_pos = position, \
+                                         from_cache=False, as_dict=False).items() :
+        for row in dt['data'] :
+          ret['hash_value'], ret['sqltxt']  = str(row[0]), row[1]
 
-      if dump_only_if_fts and ret['has_fts'] or ( not dump_only_if_fts ) :
-        dst_plan = os.path.join(dst_dir,'%s_%s_plan.txt'%(database_name,sql_id))
-        dst_txt = os.path.join(dst_dir,'%s_%s_txt.sql'%(database_name,sql_id))
-        if not os.path.exists(dst_plan) :
-          with open(dst_plan, 'a+') as fptr :
-            json.dump(ret['plan'],fptr)
-        if not os.path.exists(dst_txt)  :
-          with open(dst_txt, 'a+') as fptr :
-            fptr.writelines(ret['sqltxt'])
+      if len(ret['hash_value']) > 0 :
+        rpl = [[ 'PQ_HASH_VALUE', ret['hash_value']]]
+        query_str = self.load_sqlfile(os.path.join(self.query_dir,'ve_plan.sql'),
+                                      notdefined=True, specific_replacements=rpl)
+        if len(dst_dir) > 0 :
+          dst_plan = os.path.join(dst_dir,'%s_%s_plan.txt'%(database_name,sql_id))
+          if not os.path.exists(dst_plan) :
+            dst_plan_fptr = open(os.path.join(dst_dir,'%s_%s_plan.csv'%(database_name,sql_id)), 'a+')
+            dst_plan_fptr.write('oid,parent_id,operation,object_name,byts,rows,cost\n')
+          else :
+            dst_plan_fptr = None
+        else :
+          dst_plan_fptr = None
+        for _, dt in self.get_remote_query('', query_string=query_str, specific_pos = position, \
+                                           as_dict=False, rows_limit=problem_plan_limit).items() :
+          try :
+            for ( oid, parent_id, operation, object_name, byts, rows, cost ) in dt['data'] :
+              if "FULL" in operation :
+                ret['has_fts'] = True
+              if dst_plan_fptr :
+                dst_plan_fptr.write(str(( oid, parent_id, operation, object_name, byts, rows, cost ))+'\n')
+          except Exception as e :
+            debug_post_msg("Error unpacking query: %s | returned data: %s"%(query_str,str(dt)))
+
+          if 'all_rows' in dt :
+            ret['problem_with_plan_analysis'] = True if not dt['all_rows'] else False
+
+        if dst_plan_fptr :
+          dst_plan_fptr.close()
+
+        if dump_only_if_fts and ret['has_fts'] or ( not dump_only_if_fts ) or ret['problem_with_plan_analysis'] :
+          dst_txt = os.path.join(dst_dir,'%s_%s_txt.sql'%(database_name,sql_id))
+          if not os.path.exists(dst_txt)  :
+            with open(dst_txt, 'a+') as fptr :
+              fptr.writelines(ret['sqltxt'])
 
     return(ret)
 
@@ -197,9 +143,9 @@ class collector(OracleConnection) :
 
 
     if len(tables) == 0 :
-      for con_seq,con_data in  self.__standard_query__('ve_stats_history.sql', expires=60).items() :
+      for con_seq,con_data in  self.get_remote_query('ve_stats_history.sql', expires=60).items() :
         ret[con_seq] = {}
-        for tbs in con_data  :
+        for tbs in con_data['data']  :
           if days != -1 or ( tbs['modification_time'] > tbs['stats_update_time'] < delta ) :
             to_add = __make_list__(tbs['owner'],op,tbs['table_name'],estimate_percent,max_parallel)
             try :
@@ -231,20 +177,21 @@ class collector(OracleConnection) :
 
 
 #######################################################################################################################
-  def build_defrag_script(self, reclaimable_treshold:int=50, from_cache:bool=True, max_parallel:int=4, estimate_percent:int=60, output_dir:str="") -> dict :
+  def build_defrag_script(self, reclaimable_treshold:int=50, from_cache:bool=True, max_parallel:int=4, \
+                                estimate_percent:int=60, output_dir:str="") -> dict :
     '''
     Build a script file to execute table defrag and index rebuild
     '''
     ret = {}
 
-    all_indexes = self.__standard_query__('ve_indexes.sql', expires=60, from_cache=from_cache)
+    all_indexes = self.get_remote_query('ve_indexes.sql', expires=60, from_cache=from_cache)
 
     for con,con_data in self.ve_table_fragmentation(reclaimable_treshold=reclaimable_treshold,from_cache=from_cache).items() :
       ret[con] = { 'stats' : [], 'pre_stats' : [], 'pos_stats': [] }
       indexes_con = {}
 
       # Organize all indexes on this database
-      for v in all_indexes[con] :
+      for v in all_indexes[con]['data'] :
         try :
           indexes_con[v['owner']][v['table_name']].append((v['index_name'], v['degree']))
         except :
@@ -305,8 +252,8 @@ class collector(OracleConnection) :
     '''
     ret = {}
 
-    for con_seq, con_data in self.__standard_query__('ve_table_frag.sql', expires=60).items() :
-      for table in con_data :
+    for con_seq, con_data in self.get_remote_query('ve_table_frag.sql', expires=60, from_cache=from_cache).items() :
+      for table in con_data['data'] :
         if table['owner'] not in self.ora_users_to_ignore and table['pct_reclaimable'] >= reclaimable_treshold :
           try :
             ret[con_seq].append(table)
@@ -315,7 +262,7 @@ class collector(OracleConnection) :
     return(ret)
 
 #######################################################################################################################
-  def ve_sql_monitor(self, from_cache:bool=True) :
+  def ve_sql_monitor(self, fields:list = [ 'top_queries', 'current' ], from_cache:bool=True) :
     '''
     Get top queries running on the system
 
@@ -327,20 +274,22 @@ class collector(OracleConnection) :
              }
     '''
     ret = {}
-    top = self.__standard_query__('ve_sql_top_200.sql', from_cache=from_cache)
-    query_mon = self.__standard_query__('ve_sql_monitor.sql', from_cache=from_cache)
+    top = self.get_remote_query('ve_sql_top_200.sql', from_cache=from_cache)
+    query_mon = self.get_remote_query('ve_sql_monitor.sql', from_cache=from_cache)
 
-    for con_seq,con_data in top.items() :
-      if con_seq not in ret:
+
+    if 'top_queries' in fields :
+      for con_seq,con_data in top.items() :
         ret[con_seq] = { 'top_queries' : [], 'current' : [] }
-      for data in con_data :
-        if data['sql_id'] not in ret[con_seq]['top_queries'] :
-          ret[con_seq]['top_queries'].append(data['sql_id'])
+        for data in con_data['data'] :
+          if data['sql_id'] not in ret[con_seq]['top_queries'] :
+            ret[con_seq]['top_queries'].append(data['sql_id'])
 
-    for con_seq,con_data in query_mon.items() :
-      if con_seq not in ret :
-        ret[con_seq] = { 'top_queries' : [] }
-      ret[con_seq]['current'] = con_data
+    if 'current' in fields :
+      for con_seq,con_data in query_mon.items() :
+        if con_seq not in ret :
+          ret[con_seq] = { 'top_queries' : [], 'current' : [] }
+        ret[con_seq]['current'] = con_data['data']
 
     return(ret)
 
@@ -355,11 +304,10 @@ class collector(OracleConnection) :
         { }
     '''
     ret = {}
-    with_work = self.__standard_query__('ve_with_work.sql', from_cache=from_cache)
     instance_info = self.ve_instance_info(from_cache=from_cache)
 
-    for con_seq,con_data in  self.__standard_query__('ve_with_work.sql', from_cache=from_cache).items() :
-      for data in con_data :
+    for con_seq,con_data in  self.get_remote_query('ve_with_work.sql', from_cache=from_cache).items() :
+      for data in con_data['data'] :
         dct = {
             'server' : instance_info[con_seq][data['inst_id']]['hostname'],
             'inst_name' : instance_info[con_seq][data['inst_id']]['name'],
@@ -375,44 +323,54 @@ class collector(OracleConnection) :
     return(ret)
 
 #######################################################################################################################
-  def ve_log(self, from_cache:bool=True) -> dict:
+  def ve_log(self, fields:list = [ 'log_switches', 'logfile', 'log' ], from_cache:bool=True) -> dict:
     '''
+    Returns :
+      dict -> { con_seq : { instance_id : { log_switches :  [{datetime , count }], logfiles : [list], log : [list] }
     '''
     ret = {}
-    ve_log     = self.__standard_query__('ve_log.sql', from_cache=from_cache)
-    instance_info = self.ve_instance_info(from_cache=from_cache)
 
     # Get log switches per minute
-    for con_seq,con_data in self.__standard_query__('ve_loghist.sql', from_cache=from_cache).items() :
-      database_name = self.database_name(con_seq)
-      ret[database_name] = { }
-      for l_entry in con_data :
-        inst_name = instance_info[con_seq][l_entry['inst_id']]['name']
-        dct = {
-            'datetime' : datetime.datetime.strptime(l_entry['char_datetime'], '%Y-%m-%d  %H:%M'),
-            'count' : l_entry['count'] }
-        try :
-          ret[database_name][inst_name]['log_switches'].append(dct)
-        except :
+    if 'log_switches' in fields :
+      for con_seq,con_data in self.get_remote_query('ve_loghist.sql', from_cache=from_cache).items() :
+        ret[con_seq] = { }
+        for l_entry in con_data['data'] :
+          dct = {
+              'datetime' : datetime.datetime.strptime(l_entry['char_datetime'], '%Y-%m-%d  %H:%M'),
+              'count' : l_entry['count'] }
           try :
-            ret[database_name][inst_name]['log_switches'] = [ dct ]
+            ret[con_seq][l_entry['inst_id']]['log_switches'].append(dct)
           except :
-            ret[database_name][inst_name] = { 'log_switches' : [ dct ] }
+            ret[con_seq][l_entry['inst_id']] = { 'log_switches' : [ dct ] }
 
-    for con_seq,con_data in self.__standard_query__('ve_logfile.sql', from_cache=from_cache).items() :
-      database_name = self.database_name(con_seq)
-      for l_entry in con_data :
-        inst_name = instance_info[con_seq][l_entry['inst_id']]['name']
-        dct = { }
-        for k in [ 'group', 'status', 'type', 'member', 'is_recovery_dest_file' ] :
-          dct[k] = l_entry[k]
-        try :
-          ret[database_name][inst_name]['logfiles'].append(dct)
-        except :
+    if 'logfile' in fields :
+      for con_seq,con_data in self.get_remote_query('ve_logfile.sql', from_cache=from_cache).items() :
+        if con_seq not in ret :
+          ret[con_seq] = {}
+        for l_entry in con_data['data'] :
+          dct = { k : l_entry[k] for k in [ 'group', 'status', 'type', 'member', 'is_recovery_dest_file' ] }
           try :
-            ret[database_name][inst_name]['logfiles'] = [ dct ]
+            ret[con_seq][l_entry['inst_id']]['logfiles'].append(dct)
           except :
-            ret[database_name][inst_name] = { 'logfiles' : [ dct ] }
+            try :
+              ret[con_seq][l_entry['inst_id']]['logfiles'] = [ dct ]
+            except :
+              ret[con_seq][l_entry['inst_id']] = { 'logfiles' : [ dct ] }
+
+    if 'log' in fields :
+      for con_seq,data in self.get_remote_query('ve_log.sql', from_cache=from_cache).items() :
+        if con_seq not in ret :
+          ret[con_seq] = {}
+        for row in data['data'] :
+          inst_id = row['inst_id']
+          row.pop('inst_id')
+          try :
+            ret[con_seq][inst_id]['log'].append(row)
+          except :
+            try :
+              ret[con_seq][inst_id] = { 'log' : [ row ] }
+            except :
+              ret[con_seq] = { inst_id : { 'log' : [ row ] } }
 
     return(ret)
 
@@ -422,31 +380,19 @@ class collector(OracleConnection) :
     Get active sessions along with information about what its being done
     '''
     ret = {}
-    tmp_ret = self.__get_cache__('ve_active_sessions.sql')
-    if tmp_ret and from_cache:
-      ret = tmp_ret
-    else :
-      instance_info = self.ve_instance_info()
-      for con_seq, ( usr, status, lockwait, cmd, sid, serial, inst_id, hash_value, sql_id, sqltext ) \
-          in self.get_remote_query('ve_active_sessions.sql') :
-        hostname, inst_name = instance_info[con_seq][inst_id]['hostname'], instance_info[con_seq][inst_id]['name']
-
-        dct = { 'server' : hostname, 'inst_name' : inst_name,
-            'user' :usr, 'status' : status, 'lockwait' : lockwait, 'cmd' : cmd, 'session_id' : sid, 'serial' : serial,
-            'hash_value' : hash_value, 'sql_id' : sql_id, 'sqltext' : sqltext }
-
-        try :
-          try :
-            w = [ True if i['inst_name'] == inst_name and i['session_id'] == sid else False for i in ret[con_seq]]
-            if not any(w) :
-              ret[con_seq].append(dct)
-          except :
-            ret[con_seq].append(dct)
-        except :
-          ret[con_seq] = [ dct ]
-
-      self.__add_cache__('ve_active_sessions.sql', ret)
-
+    instance_info = self.ve_instance_info()
+    for con_seq, data in self.get_remote_query('ve_active_sessions.sql', from_cache=from_cache).items() :
+      ret[con_seq] = []
+      for row in data['data'] :
+        hostname = instance_info[con_seq][row['inst_id']]['hostname']
+        inst_name =  instance_info[con_seq][row['inst_id']]['name']
+        to_check = [ True if i['inst_name'] == inst_name and \
+                             i['session_id'] == row['session_id'] \
+                          else \
+                     False \
+                     for i in ret[con_seq]]
+        if not any(to_check) :
+          ret[con_seq].append({ **{ 'server' : hostname, 'inst_name' : inst_name }, **row })
     return(ret)
 
 
@@ -459,60 +405,28 @@ class collector(OracleConnection) :
       dict ->
         { con_sequence : instance_id { **data } }
     '''
-    ret = {}
-    tmp_ret = self.__get_cache__('ve_instance_info.sql')
-
-    if tmp_ret and from_cache:
-      ret = tmp_ret
-    else :
-      for data in self.get_remote_query('ve_instance_info.sql') :
-        rw = data[1]
-        try :
-          ret[data[0]][rw[0]] = { 'id' :rw[0], 'number' :rw[1], 'name' :rw[2], 'hostname' :rw[3], 'status' :rw[4],
-                                  'parallel' :rw[5], 'thread' :rw[6], 'archiver' :rw[7], 'log_switch' :rw[8],
-                                  'logins' :rw[9], 'state' :rw[10], 'edition' :rw[11], 'type' :rw[12], }
-        except :
-          ret[data[0]]= { rw[0] : { 'id' :rw[0], 'number' :rw[1], 'name' :rw[2], 'hostname' :rw[3], 'status' :rw[4],
-                                  'parallel' :rw[5], 'thread' :rw[6], 'archiver' :rw[7], 'log_switch' :rw[8],
-                                  'logins' :rw[9], 'state' :rw[10], 'edition' :rw[11], 'type' :rw[12], }}
-
-      self.__add_cache__('ve_instance_info.sql', ret)
+    ret = { con_seq : { row['id'] : row for row in data['data'] } for con_seq, data in \
+        self.get_remote_query('ve_instance_info.sql', from_cache=from_cache).items() }
     return(ret)
 
 #######################################################################################################################
   def ve_database_info(self, from_cache=True) :
     ret = {}
-    tmp_ret = self.__get_cache__('ve_database_info.sql')
 
-    if tmp_ret and from_cache:
-      ret = tmp_ret
-    else :
-      for con_seq, ( inst_id, name, log_mode, controlfile_type, open_resetlogs, open_mode, protection_mode, \
-                     protection_level, remote_archive, database_role, platform_id, platform_name ) \
-        in self.get_remote_query('ve_database_info.sql') :
-
-        try :
-          ret[con_seq][name]['inst_id'].append(inst_id)
-          ret[con_seq][name]['log_mode'].append(log_mode)
-          ret[con_seq][name]['controlfile_type'].append(controlfile_type)
-          ret[con_seq][name]['open_resetlogs'].append(open_resetlogs)
-          ret[con_seq][name]['open_mode'].append(open_mode)
-          ret[con_seq][name]['protection_mode'].append(protection_mode)
-          ret[con_seq][name]['protection_level'].append(protection_level)
-          ret[con_seq][name]['remote_archive'].append(remote_archive)
-          ret[con_seq][name]['database_role'].append(database_role)
-          ret[con_seq][name]['platform_id'].append(platform_id)
-          ret[con_seq][name]['platform_name'].append(platform_name)
-        except :
-          if con_seq not in ret :
-            ret[con_seq] = {}
-          ret[con_seq][name] = { 'inst_id' : [ inst_id ], 'log_mode' : [ log_mode ],
-                                 'controlfile_type' : [ controlfile_type ],
-                                 'open_resetlogs' : [ open_resetlogs ] , 'open_mode' : [ open_mode ],
-                                 'protection_mode' : [ protection_mode ], 'protection_level' : [ protection_level ],
-                                 'remote_archive,' : [ remote_archive ], 'platform_id,' : [ platform_id ],
-                                 'platform_name' : [ platform_name ] }
-      self.__add_cache__('ve_database_info.sql', ret)
+    for con_seq, data in self.get_remote_query('ve_database_info.sql', from_cache=from_cache).items() :
+      ret[con_seq] = {}
+      for row in data['data'] :
+        name = row['name']
+        for k in [ 'inst_id', 'log_mode', 'controlfile_type', 'open_resetlogs', 'open_mode', 'protection_mode', \
+                   'protection_level', 'protection_level', 'remote_archive', 'database_role', 'platform_id', \
+                   'platform_name' ] :
+          try :
+            ret[con_seq][name][k].append(row[k])
+          except :
+            try :
+              ret[con_seq][name] = { k : [ row[k] ] }
+            except :
+              ret[con_seq] = { name : { k : [ row[k] ] } }
     return(ret)
 
 #######################################################################################################################
@@ -525,25 +439,14 @@ class collector(OracleConnection) :
       { con_sequence : [ { owner, status, count } ]
     '''
     ret = {}
-    tmp_ret = self.__get_cache__('ve_users_with_objets.sql')
-    if tmp_ret and from_cache:
-      ret = tmp_ret
-    else :
-      for con_seq, ( owner,status,count ) in self.get_remote_query('ve_users_with_objets.sql') :
-        try :
-          ret[con_seq][owner][status] = count
-        except :
-          try :
-            ret[con_seq][owner] = { status : count }
-          except :
-            ret[con_seq] = { owner : { status : count } }
-
-      self.__add_cache__('ve_users_with_objets.sql', ret)
+    for con_seq, data in self.get_remote_query('ve_users_with_objets.sql', from_cache=from_cache).items() :
+      ret[con_seq] = { row['owner'] : { row['status'] : row['count'] }  for row in data['data'] }
     return(ret)
 
 
 #######################################################################################################################
-  def ve_wait_events(self, metrics = [ 'session_wait_event_history', 'system_wait_events', 'system_wait_history' ],  from_cache=True) -> dict:
+  def ve_wait_events(self, metrics = [ 'session_wait_event_history', 'system_wait_events', 'system_wait_history' ], \
+                     from_cache=True) -> dict:
     '''
     Get current wait events on the database instances
 
@@ -551,21 +454,19 @@ class collector(OracleConnection) :
       dict ->
         { con_sequence : { 'session_wait_event' : [], 'wait_hist' : [], 'system_waits' : [] }}'
     '''
-    ret = {}
-
-    for i in range(len(self.__remote_connections__)) :
-      ret[i] = { 'session_wait_event_history' : [], 'system_wait_events' : [], 'system_wait_history' : []}
+    base_ret = { 'session_wait_event_history' : [], 'system_wait_events' : [], 'system_wait_history' : []}
+    ret = { i : base_ret for i in range(len(self.__remote_connections__)) }
 
     if 'session_wait_event_history' in metrics :
-      for con_seq, evts in self.__standard_query__('ve_session_wait_hist.sql', from_cache=from_cache).items() :
-        ret[con_seq]['session_wait_event_history'] = evts
+      for con_seq, evts in self.get_remote_query('ve_session_wait_hist.sql', from_cache=from_cache).items() :
+        ret[con_seq]['session_wait_event_history'] = evts['data']
 
     if 'system_wait_events' in metrics :
-      for con_seq, evts in self.__standard_query__('ve_system_wait_class.sql', from_cache=from_cache).items() :
-        ret[con_seq]['system_wait_events'] = evts
+      for con_seq, evts in self.get_remote_query('ve_system_wait_class.sql', from_cache=from_cache).items() :
+        ret[con_seq]['system_wait_events'] = evts['data']
 
     if 'system_wait_history' in metrics :
-      for con_seq, evts in self.__standard_query__('ve_wait_hist.sql', from_cache=from_cache).items() :
-        ret[con_seq]['system_wait_history'] = evts
+      for con_seq, evts in self.get_remote_query('ve_wait_hist.sql', from_cache=from_cache).items() :
+        ret[con_seq]['system_wait_history'] = evts['data']
 
     return(ret)
