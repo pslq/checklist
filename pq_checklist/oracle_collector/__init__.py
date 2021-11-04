@@ -445,6 +445,61 @@ class collector(OracleConnection) :
 
 
 #######################################################################################################################
+  def ve_osstat(self, from_cache=True) :
+    ret = {}
+    for con_seq, data in self.get_remote_query('ve_osstat.sql', from_cache=from_cache).items() :
+      ret[con_seq] = {}
+      for row in data['data'] :
+        ret[con_seq][row['stat_name']] = { k : row[k] for k in [ 'value', 'cumulative', 'comments' ] }
+    return(ret)
+
+#######################################################################################################################
+  def ve_sum_datafile_size(self, from_cache=True) :
+    ret = {}
+    for con_seq, data in self.get_remote_query('ve_sum_datafile.sql', from_cache=from_cache).items() :
+      ret[con_seq] = {}
+      for row in data['data'] :
+        ret[con_seq]['dbsize'] = row['dbsize']
+    return(ret)
+
+#######################################################################################################################
+  def ve_object_type_size(self, from_cache=True) :
+    ret = {}
+    for con_seq, data in self.get_remote_query('ve_object_type_size.sql', from_cache=from_cache).items() :
+      ret[con_seq] =  { row['segment_type'] : row['size'] for row in data['data'] }
+    return(ret)
+
+#######################################################################################################################
+  def ve_open_cursor(self, from_cache=True) :
+    ret = {}
+    for con_seq, data in self.get_remote_query('ve_open_cursor.sql', from_cache=from_cache).items() :
+      ret[con_seq] = { row['parameter'] : { k : row[k] for k in [ 'size', 'usage' ] } for row in data['data'] }
+    return(ret)
+
+#######################################################################################################################
+  def ve_asm_dg(self, from_cache=True) :
+    ret = {}
+    for con_seq, data in self.get_remote_query('ve_asm_dg.sql', from_cache=from_cache).items() :
+      ret[con_seq] = { }
+      for row in data['data'] :
+        ret[con_seq][row['dgname']] = { 'config' : {}, 'disks' : {} }
+        for k in [ 'state', 'redundancy_level', 'sector_size', 'block_size', 'allocation_unit_size',
+                   'compatibility', 'database_compatibility', 'dg_size', 'dg_used_size', 'dg_free_size' ] :
+          ret[con_seq][row['dgname']]['config'][k] = row[k]
+        if 'inst_id' in ret[con_seq][row['dgname']] :
+          ret[con_seq][row['dgname']]['config']['inst_id'].append(row['inst_id'])
+        else :
+          ret[con_seq][row['dgname']]['config']['inst_id'] = [ row['inst_id'] ]
+    for con_seq, data in self.get_remote_query('ve_asm_disk_stat.sql', from_cache=from_cache).items() :
+      if con_seq not in :
+        ret[con_seq] = {}
+      for row in data['data'] :
+        if row['dg_name'] not in ret[con_seq]:
+          ret[con_seq][row['dg_name']]  = { 'config' : {}, 'disks' : {} }
+        ret[con_seq][row['dg_name']]['disks'] = { row['path'] : { k1 : row[k1] for k1 in [ 'disk_size', 'free_disk_space' ] } }
+    return(ret)
+
+#######################################################################################################################
   def ve_wait_events(self, metrics = [ 'session_wait_event_history', 'system_wait_events', 'system_wait_history' ], \
                      from_cache=True) -> dict:
     '''

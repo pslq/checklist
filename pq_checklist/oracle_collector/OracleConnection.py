@@ -109,17 +109,21 @@ class OracleConnection() :
                      "ve_with_work.sql",  "ve_session_wait_hist.sql", 've_instance_info.sql',
                      "ve_wait_hist.sql", "ve_database_info.sql", "ve_tablespace_usage.sql", "ve_table_frag.sql",
                      've_indexes.sql', 've_stats_history.sql', 've_log.sql', 've_logfile.sql', 've_loghist.sql',
-                     've_sql_top_200.sql', 've_sql_monitor.sql', 've_system_wait_class.sql' ]
+                     've_sql_top_200.sql', 've_sql_monitor.sql', 've_system_wait_class.sql', 've_osstat.sql',
+                     've_sum_datafile.sql', 've_instance_recovery.sql', 've_object_type_size.sql', 've_open_cursor.sql',
+                     've_asm_dg.sql', 've_asm_disk_stat.sql ]
+
 
     # helper to avoid convert the list to a string that will be used within Oracle multiple times
     __PQ_NOTOWNERS_str__ = str(self.ora_users_to_ignore).replace('[','').replace(']','')
     __PQ_SECONDS_MONITOR__ = self.config['LOOP']['interval'].strip()
 
     self.query_replacements = { 've_session_wait_hist.sql' : [ [ 'PQ_SECONDS_MONITOR', __PQ_SECONDS_MONITOR__ ] ],
-                                've_wait_hist.sql'  : [ [ 'PQ_SECONDS_MONITOR', __PQ_SECONDS_MONITOR__ ] ],
-                                've_indexes.sql'    : [ [ 'PQ_NOTOWNERS',       __PQ_NOTOWNERS_str__ ]],
-                                've_table_frag.sql' : [ [ 'PQ_NOTOWNERS',       __PQ_NOTOWNERS_str__ ]],
-                                've_stats_history.sql' : [ [ 'PQ_NOTOWNERS',    __PQ_NOTOWNERS_str__ ]]
+                                've_wait_hist.sql'         : [ [ 'PQ_SECONDS_MONITOR', __PQ_SECONDS_MONITOR__ ] ],
+                                've_indexes.sql'           : [ [ 'PQ_NOTOWNERS',       __PQ_NOTOWNERS_str__ ]],
+                                've_table_frag.sql'        : [ [ 'PQ_NOTOWNERS',       __PQ_NOTOWNERS_str__ ]],
+                                've_object_type_size.sql'  : [ [ 'PQ_NOTOWNERS',       __PQ_NOTOWNERS_str__ ]],
+                                've_stats_history.sql'     : [ [ 'PQ_NOTOWNERS',    __PQ_NOTOWNERS_str__ ]]
                               }
 
     self.query_result_sequence = {
@@ -138,17 +142,27 @@ class OracleConnection() :
         've_sql_top_200.sql'       : ( 'sql_id', 'tot_time' ),
         've_sql_monitor.sql'       : ( 'status', 'username', 'sid', 'module', 'service_name', 'sql_id', 'tot_time' ),
         've_session_wait_hist.sql' : ( 'inst_id', 'event', 'wait_class', 'count' ),
-        've_system_wait_class.sql' : ( 'inst_id', 'wait_class', 'total_waits', 'time_waited', 'total_waits_fg', 'time_waited_fg' ),
+        've_system_wait_class.sql' : ( 'inst_id', 'wait_class', 'total_waits', 'time_waited', 'total_waits_fg',
+                                       'time_waited_fg' ),
         've_wait_hist.sql'         : ( 'inst_id', 'sql_id', 'session_id', 'user', 'module', 'program', 'machine',
-                                       'session_state', 'time_waited', 'count', 'event', 'pga_allocated', 'temp_space_allocated' ),
+                                       'session_state', 'time_waited', 'count', 'event', 'pga_allocated',
+                                       'temp_space_allocated' ),
         've_database_info.sql'     : ( 'inst_id', 'name', 'log_mode', 'controlfile_type', 'open_resetlogs', 'open_mode',
                                        'protection_mode', 'protection_level', 'remote_archive', 'database_role',
                                        'platform_id', 'platform_name'),
         've_users_with_objets.sql' : ( 'owner','status','count' ),
         've_instance_info.sql'     : ( 'id', 'number', 'name', 'hostname', 'status', 'parallel', 'thread', 'archiver',
                                        'log_switch', 'logins', 'state', 'edition', 'type' ),
-        've_active_sessions.sql'   : ( 'user', 'status', 'lockwait', 'cmd', 'session_id', 'serial', 'inst_id', 'hash_value', 'sql_id', 'sqltext' )
-
+        've_active_sessions.sql'   : ( 'user', 'status', 'lockwait', 'cmd', 'session_id', 'serial', 'inst_id',
+                                       'hash_value', 'sql_id', 'sqltext' ),
+        've_osstat.sql'            : ( 'inst_id', 'stat_name', 'value', 'cumulative', 'comments' ),
+        've_sum_datafile.sql'      : ( 'dbsize' ),
+        've_object_type_size.sql'  : ( 'segment_type', 'size' ),
+        've_open_cursor.sql'       : ( 'parameter', 'size', 'usage' ),
+        've_asm_dg.sql'            : ( 'inst_id', 'dgname', 'state', 'redundancy_level', 'sector_size', 'block_size',
+                                       'allocation_unit_size', 'compatibility', 'database_compatibility', 'dg_size',
+                                       'dg_used_size', 'dg_free_size' ),
+        've_asm_disk_stat.sql'     : ( 'grp_number', 'dg_name', 'path', 'disk_size', 'free_disk_space' )
 
     }
 

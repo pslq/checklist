@@ -1,0 +1,4 @@
+select inst_id, ACTUAL_REDO_BLKS, TARGET_REDO_BLKS, TARGET_MTTR, ESTIMATED_MTTR,
+       OPTIMAL_LOGFILE_SIZE, CKPT_BLOCK_WRITES  
+from   gv$instance_recovery;
+
