@@ -70,16 +70,12 @@ def debug_post_msg(logger, msg:str, screen_only:bool=False, no_screen:bool = Fal
       elif cur_level >= 10 :
         logger.debug(msg)
 
-    if no_screen :
-      if err == True :
-        dst = sys_stderr
-      else :
-        dst = sys_stdout
-
-      print(msg, file=dst, end=end, flush=flush)
+    if not no_screen :
+      print(msg, file=sys_stderr, end=end, flush=flush)
 
     if raise_type :
       raise raise_type(msg)
+
   except Exception as e:
     raise Exception(e)
   return(None)
@@ -154,7 +150,7 @@ def line_cleanup(iterable, split=False, delimiter='', cleanup = True, remove_end
 
 ########################################################################################################################
 # Helper to execute shell commands
-def get_command_output(command=None, cwd=None, pq_logger = None, shell=False, timeout=30, ansible_module = None, \
+def get_command_output(command=None, cwd=None, pq_logger = None, shell=False, timeout=30, \
                  default_env = { 'LC_ALL' : 'C', 'PATH' : '/sbin:/etc:/bin:/usr/bin:/usr/sbin:/usr/ios/cli', 'ODMDIR' : '/etc/objrepos' }) -> dict :
   '''
   This helper works around subprocess module to execute shell commands within python3
@@ -166,7 +162,6 @@ def get_command_output(command=None, cwd=None, pq_logger = None, shell=False, ti
     pq_logger = Logging object to be used
     shell     = If a shell will be spawn to execute the command
     timeout   = for how long the command will be executed before assume it hanged
-    ansible_module = Try to use internal ansible module structure to run command
 
   Returns:
       dict with the following elements:
@@ -177,7 +172,7 @@ def get_command_output(command=None, cwd=None, pq_logger = None, shell=False, ti
 
   import subprocess as sp
   command_list = []
-  ret = None
+  ret = { 'stdout' : [], 'stderr' : [], 'retcode' : -1 }
   if command :
     if isinstance(command, str) :
       command_list = command.split(' ')
@@ -186,21 +181,13 @@ def get_command_output(command=None, cwd=None, pq_logger = None, shell=False, ti
       command_list = command
       command_string = ' '.join(command)
     if len(command_list) > 0 :
-      if ansible_module :
-        try :
-          rc, stdout, stderr = ansible_module.run_command(command_string, cwd=cwd, environ_update=default_env)
-          ret = { 'stdout' : stdout.decode().split('\n') if stdout else [], 'stderr' : stderr.decode().split('\n') if stderr else [], 'retcode' : rc}
-          if rc != 0 :
-            ansible_module.fail_json(msg='Error Running command: %s'%command_string, rc=rc, stdout=stdout, stderr=stderr)
-
-        except Exception as e :
-          debug_post_msg(pq_logger, "Error when run : %s : msg : %s"%(command_string,e))
-      else :
-        try :
-          out = sp.run(command_list, capture_output=True, shell=shell, cwd=cwd, timeout=timeout, env=default_env)
-          ret = { 'stdout' : out.stdout.decode().split('\n'), 'stderr' : out.stderr.decode().split('\n'), 'retcode' : out.returncode }
-        except Exception as e :
-          debug_post_msg(pq_logger, "Error when run : %s : msg : %s"%(command_string,e))
+      try :
+        out = sp.run(command_list, capture_output=True, shell=shell, cwd=cwd, timeout=timeout, env=default_env)
+        ret['stdout'] = out.stdout.decode().split('\n')
+        ret['stderr'] = out.stderr.decode().split('\n')
+        ret['retcode'] = out.returncode
+      except Exception as e :
+        debug_post_msg(pq_logger, "Error when run : %s : msg : %s"%(command_string,e))
   return(ret)
 
 
@@ -365,4 +352,3 @@ def main() -> int:
 
 if __name__ == '__main__' :
   main()
-
