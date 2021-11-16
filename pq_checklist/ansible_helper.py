@@ -1,4 +1,4 @@
-import os, os.path, shutil, importlib, sys
+import os, os.path, shutil, importlib.util, sys
 '''
 Helper functions to run remote commands through Ansible using ansible_runner module
 '''
