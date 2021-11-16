@@ -18,8 +18,6 @@ class collector(Base_collector) :
         }
 
     self.file_sources = {
-        'uname_a'     : self.bos_data.file_sources['uname_a'],
-        'lsdev_class' : self.bos_data.file_sources['lsdev_class'],
         'iostat_AIX'  : self.providers['iostat'].parse_iostat_stats
         }
     return(None)

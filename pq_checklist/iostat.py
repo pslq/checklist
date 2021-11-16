@@ -7,17 +7,18 @@ import datetime
 
 class parser(StatsParser) :
   def __init__(self, logger = None, samples = 2, interval = 1, cwd = '/tmp', bos_data = None) :
-    super().__init__(logger = logger, cwd = cwd)
+    super().__init__(logger = logger, cwd = cwd, bos_data = bos_data)
 
-    self.bos_data = bos_data
-    self.commands = { }
+    comms = { 'aix' : "iostat -DRTl %d %d"%(self.interval, self.samples),
+              'linux' : "iostat -d -k -N -p ALL -t -x -y %d %d"%(self.interval, self.samples)
+              }
 
-    self.functions = {
-        'stats' : self.parse_iostat_stats
-        }
+    self.commands[bos_data['bos']['os']]['stats'] = comms[self.bos_data.data['bos']['os']]
+
+    self.functions['aix'] = { 'stats' : self.parse_iostat_stats }
+    self.functions['linux'] = { 'stats' : self.parse_iostat_stats }
 
     self.file_sources = {
-        'iostat' : self.parse_iostat_stats,
         'iostat_AIX' : self.parse_iostat_stats,
         'iostat_LINUX' : self.parse_iostat_stats
         }
@@ -30,18 +31,11 @@ class parser(StatsParser) :
 
 #######################################################################################################################
   def update_commands(self) :
-    '''
-    Update commands and functions dict
-    '''
-    try :
-      if self.bos_data['bos']['os'] == "aix" :
-        self.commands['stats'] = "iostat -DRTl %d %d"%(self.interval, self.samples)
-      elif self.bos_data['bos']['os'] == "linux" :
-        self.commands['stats'] = "iostat -d -k -N -p ALL -t -x -y %d %d"%(self.interval, self.samples)
-    except Exception as e :
-      debug_post_msg(self.logger,'Error Initializing commands: %s'%e, raise_type=Exception)
+    comms = { 'aix' : [ 'stats', "iostat -DRTl %d %d"%(self.interval, self.samples) ],
+              'linux' : [ 'stats', "iostat -d -k -N -p ALL -t -x -y %d %d"%(self.interval, self.samples) ]
+    }
+    self.commands = { k : { v[0] : v[1] } for k,v in comms.items() }
     return(None)
-
 
 #######################################################################################################################
   def get_measurements(self, elements = [ 'stats' ], consolidate_function = avg_list, update_from_system:bool=True) :

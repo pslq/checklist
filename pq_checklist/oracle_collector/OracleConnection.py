@@ -111,7 +111,7 @@ class OracleConnection() :
                      've_indexes.sql', 've_stats_history.sql', 've_log.sql', 've_logfile.sql', 've_loghist.sql',
                      've_sql_top_200.sql', 've_sql_monitor.sql', 've_system_wait_class.sql', 've_osstat.sql',
                      've_sum_datafile.sql', 've_instance_recovery.sql', 've_object_type_size.sql', 've_open_cursor.sql',
-                     've_asm_dg.sql', 've_asm_disk_stat.sql ]
+                     've_asm_dg.sql', 've_asm_disk_stat.sql' ]
 
 
     # helper to avoid convert the list to a string that will be used within Oracle multiple times

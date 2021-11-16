@@ -2,6 +2,11 @@ from . import pq_logger, debug_post_msg, conv_bash_var_to_dict
 import importlib,json,os
 from datetime import datetime
 from .Base_collector import Base_collector
+from . import ansible_helper
+from time import time
+from .db_client import db_client
+from . import net_collector, cpu_collector, dio_collector, oracle_collector
+
 
 #######################################################################################################################
 def loop(config_file) :
@@ -47,23 +52,72 @@ class collector(Base_collector) :
 
 
 #######################################################################################################################
+  def load_collectors_for_host(self,nodename:str, local_only=False) -> None :
+    '''
+    Load collectors for each host that will go through data collection
+
+    Parameters :
+      nodename : str -> hostname to be analyzed
+      only_local_node : bool -> [True,False]  Load only collectors that should be running on the local machine
+
+    Returns :
+      None
+    '''
+    self.collectors[nodename] = {}
+    ret = []
+
+    cols = { 'net' : net_collector.collector,
+             'cpu' : cpu_collector.collector,
+             'dio' : dio_collector.collector,
+             'oracle' : oracle_collector.collector
+             }
+
+    def look_for_bos(nodename) :
+      '''
+      Reuse bos information for another class to avoid memory waste
+      '''
+      ret = None
+      try :
+        for c in self.collectors[nodename].value() :
+          if 'bos_data' in c.__dir__() :
+            ret = c.bos_data
+            break
+      except :
+        pass
+      return(ret)
+
+    def l_check(pos,l_col,nodename, local_only=False) :
+      '''
+      Helper to define if the collector should be loaded
+      '''
+      ret = True
+      if ( nodename == l_col.nodename and l_col.only_on_localhost == local_only == True ) or \
+         ( local_only == l_col.only_on_localhost == False and nodename != l_col.nodename ) :
+        self.collectors[nodename][pos] = l_col
+        ret = l_col.only_on_localhost
+      return(ret)
+
+    for ck in self.checks_to_perform :
+      lparms = dict(config = self.config, logger = self.logger, bos_data = look_for_bos(nodename))
+      ret.append(l_check(ck,cols[ck](**lparms),nodename, local_only))
+
+    return(any(ret))
+
+#######################################################################################################################
   def collect_all(self, debug=False, get_hc:bool = True) -> None:
     '''
     Main function that consolidate all data from collectors
     '''
-    from time import time
-    from .db_client import db_client
     st = time()
     data = []
-    update_data_on_measurement = True
     mode = self.config['MODE']['mode'].strip().lower()
+    update_data_on_measurement = True if mode == 'local' else False
 
     if mode == 'local' :
       if self.nodename not in self.collectors :
-        self.__load_collectors_for_host__(self.nodename)
+        self.load_collectors_for_host(self.nodename)
     elif mode == 'ansible' :
       self.update_all_ansible_playbook(debug=debug)
-      update_data_on_measurement = False
 
     # Get all information from hosts defined into the collectors
     for hosts in self.collectors.keys() :
@@ -96,38 +150,49 @@ class collector(Base_collector) :
     Returns:
       dict -> A dict with data feed to the collectors
     '''
-    from . import ansible_helper
-    playbook = self.config['ANSIBLE']['playbook'].strip()
-    to_collect = []
     tasks_output = {}
-    if 'cpu' in self.checks_to_perform :
-      to_collect += [ "smtctl_c", "lsdev_class", "mpstat_a", "lparstat_i", "lparstat_s", "uname_a" ]
-    if 'net' in self.checks_to_perform :
-      to_collect += [ 'entstat', 'netstat_s' ]
-      tasks_output['entstat'] = [ 'adapters' ]
-    if 'dio' in self.checks_to_perform :
-      to_collect += [ 'iostat_LINUX', 'iostat_AIX', 'fcstat' ]
-      tasks_output['fcstat'] = [ 'adapters' ]
+    playbook = self.config['ANSIBLE']['playbook'].strip()
+    to_collect = [ 'uname_a', 'lsdev_class', 'smtctl_c'] # bos stuff
 
+    collector_types = {
+        'cpu' : [
+          [ "mpstat_AIX", "mpstat_LINUX", "lparstat_i", "lparstat_s" ],
+          []
+          ],
+        'net' : [
+          [ 'entstat', 'netstat_s'  ],
+          [ [ 'entstat', 'adapters' ] ]
+          ],
+        'dio' : [
+          [ 'iostat_LINUX', 'iostat_AIX', 'fcstat' ],
+          [ [ 'fcstat', 'adapters' ] ]
+          ],
+        'oracle' : [[],[]]
+        }
+
+    for coll in self.checks_to_perform :
+      to_collect += collector_types[coll][0]
+      tasks_output.update({ dt[0] : dt[1] for dt in collector_types[coll][1] })
 
 
     runner_parms = { 'playbook' : self.config['ANSIBLE']['playbook'].strip(),
                      'host_limit' : self.config['ANSIBLE']['host_target'].strip(),
                      'private_data_dir' : self.config['ANSIBLE']['private_data_dir'].strip(),
                      'quiet' : debug, 'cleanup_artifacts' : False if debug else True,
-                     'wanted_outputs' : to_collect, 'output_specific_data' : tasks_output}
+                     'wanted_outputs' : set(to_collect), 'output_specific_data' : tasks_output}
 
     data_from_ansible = ansible_helper.playbook_runner(**runner_parms)
 
     try :
       for host,data in data_from_ansible['results'].items() :
         if host not in self.collectors :
-          if self.__load_collectors_for_host__(host) :
-            self.__load_collectors_for_host__(self.nodename, local_only=True)
-        for check in ( 'cpu', 'net', 'dio' ) :
-          if check in self.checks_to_perform and check in self.collectors[host] :
+          if self.load_collectors_for_host(host) :
+            self.load_collectors_for_host(self.nodename, local_only=True)
+        for check in self.checks_to_perform :
+          if check in self.collectors[host] :
             self.collectors[host][check].update_from_dict(data)
     except Exception as e :
       debug_post_msg(self.logger,'Error when updating collectors with ansible data : %s'%e, raise_type=Exception)
 
     return(data_from_ansible)
+

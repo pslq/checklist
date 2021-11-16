@@ -36,11 +36,17 @@
       register: lsdev_class
       when: bos_mp.stat.exists == True
 
-    - name: mpstat_a
+    - name: mpstat_AIX
       command: mpstat -a 1 2
       poll: 02 
-      register: mpstat_a
+      register: mpstat_AIX
       when: bos_mp.stat.exists == True
+
+    - name: mpstat_LINUX
+      command: mpstat -P ALL 1 2
+      poll: 02
+      register: mpstat_LINUX
+      when: bos_mp.stat.exists != True
 
     - name: lparstat_i
       command: lparstat -i

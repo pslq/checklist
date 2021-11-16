@@ -1,5 +1,6 @@
 from . import debug_post_msg, get_config
 import json, importlib
+import datetime
 #######################################################################################################################
 
 def load_file(file_to_load,config_file) :
@@ -85,7 +86,6 @@ class db_client() :
     return(None)
 
   def delete_measurement(self, measurement,start_date:str='1970-01-01T00:00:00Z', date_end:str='') :
-    import datetime
     ret = None
     if self.db :
       delete_api = self.db.delete_api()

@@ -75,73 +75,60 @@ class TestClass:
 
   def test_netstat_stats(self):
     coll_netstat = netstat_parser()
-    expected_ret = {
-        'icmp': {
-          'calls_to_icmp_error': 20320, 'errors_not_generated_because_old_message_was_icmp': 0, 'histogram': 'Input', 'echo_reply': 14, 'destination_unreachable': 6,
-          'echo': 131, 'messages_with_bad_code_fields': 0, 'messages_minimum_length': 0, 'bad_checksums': 0, 'messages_with_bad_length': 0, 'message_responses_generated': 131
-          },
-        'igmp': {
-          'messages_received': 820, 'messages_received_with_too_few_bytes': 0, 'messages_received_with_bad_checksum': 0, 'membership_queries_received': 820,
-          'membership_queries_received_with_invalid': 0, 'membership_reports_received': 0, 'membership_reports_received_with_invalid': 0,
-          'membership_reports_received_for_groups_to_which_we_belong': 0, 'membership_reports_sent': 10
-          },
-        'tcp': {
-          'packets_sent': 1312834, 'data_packets': 683602, 'data_packets_retransmitted': 41, 'ack-only_packets': 344234,
-          'urg_only_packets': 0, 'window_probe_packets': 0, 'window_update_packets': 52686, 'control_packets': 230075,
-          'large_sends': 6217, 'bytes_sent_using_largesend': 33470074, 'bytes_is_the_biggest_largesend': 56472,
-          'packets_received': 1053051, 'acks_2864107953': 569618, 'duplicate_acks': 130065, 'acks_for_unsent_data': 0, 'packets_received_in-sequence': 378409,
-          'completely_duplicate_packets': 3819, 'old_duplicate_packets': 0, 'packets_with_some_dup_data_bytes': 0,
-          'out-of-order_packets': 100861, 'packets_of_data_after_window': 0, 'window_probes': 0, 'packets_received_after_close': 3460,
-          'packets_with_bad_hardware_assisted_checksum': 0, 'discarded_for_bad_checksums': 0, 'discarded_for_bad_header_offset_fields': 0, 'discarded_because_packet_too_short': 0,
-          'discarded_by_listeners': 332, 'discarded_due_to_queue_full': 0, 'ack_packet_headers_correctly_predicted': 8517, 'data_packet_headers_correctly_predicted': 125024,
-          'connection_requests': 95346, 'connection_accepts': 54003, 'connections_established': 149329, 'connections_closed_11198': 149695, 'connections_with_ecn_capability': 0,
-          'times_responded_to_ecn': 0, 'embryonic_connections_dropped': 4, 'segments_updated_rtt_652233': 660984, 'segments_with_congestion_window_reduced_bit_set': 0,
-          'segments_with_congestion_experienced_bit_set': 0, 'resends_due_to_path_mtu_discovery': 0, 'path_mtu_discovery_terminations_due_to_retransmits': 23, 'retransmit_timeouts': 473,
-          'connections_dropped_by_rexmit_timeout': 2, 'fast_retransmits': 0, 'when_congestion_window_less_than_4_segments': 0, 'newreno_retransmits': 0,
-          'times_avoided_false_fast_retransmits': 0, 'persist_timeouts': 0, 'connections_dropped_due_to_persist_timeout': 0, 'keepalive_timeouts': 2730, 'keepalive_probes_sent': 2730,
-          'connections_dropped_by_keepalive': 0, 'times_sack_blocks_array_is_extended': 0, 'times_sack_holes_array_is_extended': 0, 'packets_dropped_due_to_memory_allocation_failure': 0,
-          'connections_in_timewait_reused': 0, 'delayed_acks_for_syn': 0, 'delayed_acks_for_fin': 0, 'send_and_disconnects': 0, 'spliced_connections': 0,
-          'spliced_connections_closed': 0, 'spliced_connections_reset': 0, 'spliced_connections_timeout': 0, 'spliced_connections_persist_timeout': 0, 'spliced_connections_keepalive_timeout': 0,
-          'tcp_checksum_offload_disabled_during_retransmit': 0, 'connections_dropped_due_to_bad_acks': 0, 'connections_dropped_due_to_duplicate_syn_packets': 0,
-          'fastpath_loopback_connections': 0, 'fastpath_loopback_sent_packets': 0, 'fastpath_loopback_received_packets': 0, 'fake_syn_segments_dropped': 0, 'fake_rst_segments_dropped': 0,
-          'data_injection_segments_dropped': 0, 'tcptr_max_connections_dropped': 0, 'tcptr_connections_dropped_for_no_memory': 0, 'tcptr_maximum_per_host_connections_dropped': 0,
-          'connections_dropped_due_to_max_assembly_queue_depth': 0
-          },
-        'udp': {
-          'datagrams_received': 34599107, 'incomplete_headers': 0, 'bad_data_length_fields': 0, 'bad_checksums': 9759, 'dropped_due_to_no_socket': 22678,
-          'datagrams_dropped_due_to_no_socket': 248363, 'socket_buffer_overflows': 0, 'delivered': 34318307, 'datagrams_output': 32386042
-          },
-        'ip': {
-          'total_packets_received': 35864466, 'bad_header_checksums': 0, 'with_size_smaller_than_minimum': 0, 'with_data_size_data_length': 0, 'with_header_length_data_size': 0,
-          'with_data_length_header_length': 0, 'with_bad_options': 0, 'with_incorrect_version_number': 0, 'fragments_received': 281676, 'fragments_dropped_or_out_of': 0,
-          'fragments_dropped_after_timeout': 0, 'packets_reassembled_ok': 75232, 'packets_for_this_host': 35246755, 'packets_for_protocol': 823, 'packets_forwarded': 0,
-          'packets_not_forwardable': 1953, 'redirects_sent': 0, 'packets_sent_from_this_host': 33320333, 'packets_sent_with_fabricated_ip_header': 7,
-          'output_packets_dropped_due_to_no_bufs,_etc': 0, 'output_packets_discarded_due_to_no_route': 0,
-          'output_datagrams_fragmented': 162544, 'fragments_created': 580428, 'datagrams_that_be_fragmented': 4, 'ip_multicast_packets_dropped_due_to_no_receiver': 0,
-          'successful_path_mtu_discovery_cycles': 0, 'path_mtu_rediscovery_cycles_attempted': 0, 'path_mtu_discovery_no-response_estimates': 0, 'path_mtu_discovery_response_timeouts': 0,
-          'path_mtu_discovery_decreases_detected': 0, 'path_mtu_discovery_packets_sent': 0, 'path_mtu_discovery_memory_allocation_failures': 0,
-          'ipintrq_overflows': 0, 'with_illegal_source': 0, 'packets_processed_by_threads': 25533704, 'packets_dropped_by_threads': 0,
-          'packets_dropped_due_to_the_full_socket_receive_buffer': 0, 'dead_gateway_detection_packets_sent': 0, 'dead_gateway_detection_packet_allocation_failures': 0,
-          'dead_gateway_detection_gateway_allocation_failures': 0, 'incoming_packets_dropped_due_to_mls_filters': 0, 'packets_not_sent_due_to_mls_filters': 0,
-          '': ''},
-        'ipv6': {
-          'total_packets_received': 408491, 'histogram': 'Input', 'tcp': 403074, 'udp': 2477, 'icmp_v6': 2358, 'with_size_smaller_than_minimum': 0,
-          'with_data_size_data_length': 0, 'with_incorrect_version_number': 0, 'with_illegal_source': 0, 'input_packets_without_enough_memory': 0, 'fragments_received': 0,
-          'fragments_dropped_or_out_of': 0, 'fragments_dropped_after_timeout': 0, 'packets_reassembled_ok': 0, 'packets_for_this_host': 407909,
-          'packets_for_protocol': 0, 'packets_forwarded': 0, 'packets_not_forwardable': 582, 'too_big_packets_not_forwarded': 0, 'packets_sent_from_this_host': 407909,
-          'packets_sent_with_fabricated_ipv6_header': 0, 'output_packets_dropped_due_to_no_bufs,_etc': 0, 'output_packets_without_enough_memory': 0,
-          'output_packets_discarded_due_to_no_route': 0, 'output_datagrams_fragmented': 0, 'fragments_created': 0, 'packets_dropped_due_to_the_full_socket_receive_buffer': 0,
-          'packets_not_delivered_due_to_bad_raw_ipv6_checksum': 0, 'incoming_packets_dropped_due_to_mls_filters': 0, 'packets_not_sent_due_to_mls_filters': 0},
-        'icmpv6': {
-            'calls_to_icmp6_error': 2358, 'errors_not_generated_because_old_message_was_icmpv6': 0, 'histogram': 'Input', 'unreachable': 2358, 'packets_too_big': 0, 'time_exceeded': 0,
-            'parameter_problems': 0, 'redirects': 0, 'echo_requests': 0, 'echo_replies': 0, 'group_queries': 0, 'group_reports': 0, 'group_terminations': 0, 'router_solicitations': 0,
-            'router_advertisements': 0, 'neighbor_solicitations': 0, 'neighbor_advertisements': 0, 'messages_with_bad_code_fields': 0, 'messages_minimum_length': 0, 'bad_checksums': 0,
-            'messages_with_bad_length': 0, 'bad_group_queries': 0, 'bad_group_reports': 0, 'our_reports': 0, 'bad_group_terminations': 0, 'bad_router_solicitations': 0,
-            'bad_router_advertisements': 0, 'bad_neighbor_solicitations': 0, 'bad_neighbor_advertisements': 0, 'bad_redirects': 0, 'mobility_calls_when_not_started': 0,
-            'home_agent_address_discovery_requests': 0, 'bad_home_agent_address_discovery_requests': 0, 'home_agent_address_discovery_replies': 0,
-            'bad_home_agent_address_discovery_replies': 0, 'prefix_solicitations': 0, 'bad_prefix_solicitations': 0, 'prefix_advertisements': 0, 'bad_prefix_advertisements': 0, 'message_responses_generated': 0}
-        }
-    assert coll_netstat.load_from_file('tests/test_data/netstat_s', parse_function=coll_netstat.parse_netstat_s) == expected_ret
+    expected_ret = {'icmp': {'calls_to_icmp_error': 20320, 'errors_not_generated_because_old_message_was_icmp': 0,
+                             'histogram': 'Input', 'echo_reply': 14, 'destination_unreachable': 6, 'echo': 131,
+                             'messages_with_bad_code_fields': 0, 'messages_minimum_length': 0, 'bad_checksums': 0,
+                             'messages_with_bad_length': 0, 'message_responses_generated': 131},
+                    'igmp': {'messages_received': 820, 'messages_received_with_too_few_bytes': 0,
+                             'messages_received_with_bad_checksum': 0, 'membership_queries_received': 820,
+                             'membership_queries_received_with_invalid': 0, 'membership_reports_received': 0,
+                             'membership_reports_received_with_invalid': 0, 'membership_reports_received_for_groups_to_which_we_belong': 0,
+                             'membership_reports_sent': 10},
+                    'tcp': {'ack_for_bytes': 0, 'large_sends': 6217, 'bytes_sent_using_largesend': 33470074,
+                            'bytes_is_the_biggest_largesend': 56472, 'window_probes': 0, 'discarded_for_bad_checksums': 0,
+                            'discarded_for_bad_header_offset_fields': 0, 'discarded_by_listeners': 332,
+                            'discarded_due_to_queue_full': 0, 'connection_requests': 95346, 'connection_accepts': 54003,
+                            'connections_established': 149329, 'connections_closed': 0, 'connections_with_ecn_capability': 0,
+                            'times_responded_to_ecn': 0, 'embryonic_connections_dropped': 4, 'segments_updated_rtt': 660984,
+                            'segments_with_congestion_window_reduced_bit_set': 0, 'segments_with_congestion_experienced_bit_set': 0,
+                            'resends_due_to_path_mtu_discovery': 0, 'path_mtu_discovery_terminations_due_to_retransmits': 23,
+                            'retransmit_timeouts': 473, 'connections_dropped_by_rexmit_timeout': 2, 'fast_retransmits': 0,
+                            'when_congestion_window_less_than_4_segments': 0, 'newreno_retransmits': 0,
+                            'times_avoided_false_fast_retransmits': 0, 'persist_timeouts': 0, 'connections_dropped_due_to_persist_timeout': 0,
+                            'keepalive_timeouts': 2730, 'keepalive_probes_sent': 2730, 'connections_dropped_by_keepalive': 0,
+                            'connections_in_timewait_reused': 0, 'send_and_disconnects': 0, 'spliced_connections': 0,
+                            'spliced_connections_reset': 0, 'spliced_connections_timeout': 0, 'spliced_connections_persist_timeout': 0,
+                            'spliced_connections_keepalive_timeout': 0, 'tcp_checksum_offload_disabled_during_retransmit': 0,
+                            'fake_syn_segments_dropped': 0, 'fake_rst_segments_dropped': 0, 'data_injection_segments_dropped': 0,
+                            'tcptr_max_connections_dropped': 0, 'tcptr_connections_dropped_for_no_memory': 0,
+                            'tcptr_maximum_per_host_connections_dropped': 0, 'connections_dropped_due_to_max_assembly_queue_depth': 0},
+                    'udp': {'datagrams_received': 34599107, 'incomplete_headers': 0, 'bad_data_length_fields': 0, 'bad_checksums': 9759,
+                            'dropped_due_to_no_socket': 22678, 'datagrams_dropped_due_to_no_socket': 248363, 'socket_buffer_overflows': 0,
+                            'delivered': 34318307, 'datagrams_output': 32386042},
+                    'ip': {'ack_for_bytes': 0, 'bad_header_checksums': 0, 'with_size_smaller_than_minimum': 0, 'with_data_size_data_length': 0,
+                           'with_header_length_data_size': 0, 'with_data_length_header_length': 0, 'with_bad_options': 0,
+                           'with_incorrect_version_number': 0, 'fragments_received': 281676, 'fragments_dropped_or_out_of': 0,
+                           'fragments_dropped_after_timeout': 0, 'redirects_sent': 0, 'output_datagrams_fragmented': 162544,
+                           'fragments_created': 580428, 'datagrams_that_be_fragmented': 4, 'successful_path_mtu_discovery_cycles': 0,
+                           'path_mtu_rediscovery_cycles_attempted': 0, 'path_mtu_discovery_no-response_estimates': 0, 'path_mtu_discovery_response_timeouts': 0,
+                           'path_mtu_discovery_decreases_detected': 0, 'path_mtu_discovery_memory_allocation_failures': 0, 'ipintrq_overflows': 0,
+                           'with_illegal_source': 0, 'dead_gateway_detection_gateway_allocation_failures': 0},
+                    'ipv6': {'ack_for_bytes': 0, 'histogram': 'Input', 'tcp': 403074, 'udp': 2477, 'icmp_v6': 2358, 'with_size_smaller_than_minimum': 0,
+                             'with_data_size_data_length': 0, 'with_incorrect_version_number': 0, 'with_illegal_source': 0, 'fragments_received': 0,
+                             'fragments_dropped_or_out_of': 0, 'fragments_dropped_after_timeout': 0, 'output_datagrams_fragmented': 0, 'fragments_created': 0},
+                    'icmpv6': {'calls_to_icmp6_error': 2358, 'errors_not_generated_because_old_message_was_icmpv6': 0, 'histogram': 'Input',
+                               'unreachable': 2358, 'ack_for_bytes': 0, 'time_exceeded': 0, 'parameter_problems': 0, 'redirects': 0, 'echo_requests': 0,
+                               'echo_replies': 0, 'group_queries': 0, 'group_reports': 0, 'group_terminations': 0, 'router_solicitations': 0,
+                               'router_advertisements': 0, 'neighbor_solicitations': 0, 'neighbor_advertisements': 0,
+                               'messages_with_bad_code_fields': 0, 'messages_minimum_length': 0, 'bad_checksums': 0, 'messages_with_bad_length': 0,
+                               'bad_group_queries': 0, 'bad_group_reports': 0, 'our_reports': 0, 'bad_group_terminations': 0,
+                               'bad_router_solicitations': 0, 'bad_router_advertisements': 0, 'bad_neighbor_solicitations': 0, 'bad_neighbor_advertisements': 0,
+                               'bad_redirects': 0, 'mobility_calls_when_not_started': 0, 'home_agent_address_discovery_requests': 0,
+                               'bad_home_agent_address_discovery_requests': 0, 'home_agent_address_discovery_replies': 0,
+                               'bad_home_agent_address_discovery_replies': 0, 'prefix_solicitations': 0, 'bad_prefix_solicitations': 0,
+                               'prefix_advertisements': 0, 'bad_prefix_advertisements': 0, 'message_responses_generated': 0}}
+
+    assert coll_netstat.load_from_file('tests/test_data/netstat_s_aix', parse_function=coll_netstat.parse_netstat_s) == expected_ret
 
 
 

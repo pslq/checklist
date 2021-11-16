@@ -7,12 +7,7 @@ import datetime
 
 class parser(StatsParser) :
   def __init__(self, logger = None, samples = 2, interval = 1, cwd = '/tmp', bos_data = None) :
-    super().__init__(logger = logger, cwd = cwd)
-
-    self.bos_data = bos_data
-    self.commands = { }
-
-    self.functions = {}
+    super().__init__(logger = logger, cwd = cwd, bos_data=bos_data)
 
     self.file_sources = { 'fcstat' : self.parse_fcstat_e_from_dict }
     # Internal list to hold all keys used when parsing stats data
@@ -27,11 +22,12 @@ class parser(StatsParser) :
     '''
     try :
       # In case self.commands and self.functions hasn't been populated yet
-      for dev in self.bos_data['dev_class']['adapter'] :
-        if 'fcs' in dev :
-          key = 'stats_%s'%dev
-          self.commands[key] = "fcstat -e %s"%dev
-          self.functions[key] = self.parse_fcstat_stats
+      if self.bos_data.data['bos']['os'] == "aix" :
+        for dev in self.bos_data['dev_class']['adapter'] :
+          if 'fcs' in dev :
+            key = 'stats_%s'%dev
+            self.commands['aix'][key] = "fcstat -e %s"%dev
+            self.functions['aix'][key] = self.parse_fcstat_stats
     except Exception as e :
       debug_post_msg(self.logger, 'Error loading device specific commands, possibly bos_data not initialized : %s'%e, raise_type=Exception)
 

@@ -18,8 +18,6 @@ class collector(Base_collector) :
 
 
     self.file_sources = {
-        'uname_a'     : self.bos_data.parse_uname_a,
-        'lsdev_class' : self.bos_data.parse_lsdev_class,
         'entstat'     : self.providers['entstat'].parse_entstat_d,
         'netstat_s'   : self.providers['netstat'].parse_netstat_s
         }

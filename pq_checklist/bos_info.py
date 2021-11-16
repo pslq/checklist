@@ -15,9 +15,13 @@ class bos(StatsParser) :
     Class with Basic OS information
     '''
     super().__init__(logger = logger, cwd = cwd)
+    self.data = { 'dev' : {},
+                  'dev_class' : {},
+                  'bos' : { 'os' : os.sys.platform },
+                  'smt' : { 'cpu_count' : os.cpu_count()/2, 'thread_count' : 2 }  }
 
     self.preserv_stats  = preserv_stats
-    self.commands = {
+    self.commands['aix'] = {
         'smtctl_c'    : "smtctl",
         'lsdev_class' : "lsdev -C -H -S a -F name:class:subclass:type",
         'lsdev_loc'   : "lsdev -C -c adapter -F 'name class location physloc'",
@@ -46,11 +50,19 @@ class bos(StatsParser) :
         "errpt"       : "errpt"
         }
 
-    self.functions = {
+    self.commands['linux'] = {
+        "rpm_qa"      : "rpm -qa",
+        'uptime'      : "uptime",
+        'uname_a'     : "uname -a",
+        }
+
+    self.functions['aix'] = {
         'lsdev_class' : self.parse_lsdev_class,
         'uname_a'     : self.parse_uname_a,
         'smtctl_c'    : self.parse_smtctl
         }
+
+    self.functions['linux'] = { 'uname_a'     : self.parse_uname_a, }
 
     self.file_sources = {
         'uname_a' : self.parse_uname_a,
@@ -59,7 +71,6 @@ class bos(StatsParser) :
         }
 
 
-    self.data = { 'dev' : {}, 'dev_class' : {}, 'bos' : {}, 'smt' : {}  }
     return(None)
 
 #######################################################################################################################

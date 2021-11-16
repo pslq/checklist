@@ -14,16 +14,13 @@ class parser(StatsParser) :
   def __init__(self, logger = None, samples = 2, interval = 1, cwd = '/tmp', bos_data = None) :
     '''
     '''
-    super().__init__(logger = logger, cwd = cwd)
-    self.bos_data = bos_data
-    self.commands = {
-        'info' : "lparstat -i",
-        'stats' : "lparstat %d %d"%(self.interval, self.samples)
-        }
-    self.functions = {
-        'info' : self.parse_lparstat_i,
-        'stats' : self.parse_lparstat_stats
-        }
+    super().__init__(logger = logger, cwd = cwd, bos_data = bos_data)
+    self.commands['aix'] = {
+                             'info' : "lparstat -i",
+                             'stats' : "lparstat %d %d"%(self.interval, self.samples) }
+    self.functions['aix'] = {
+                             'info' : self.parse_lparstat_i,
+                             'stats' : self.parse_lparstat_stats }
 
     self.data = { 'info' : {}, 'stats' : {} }
 
@@ -36,7 +33,7 @@ class parser(StatsParser) :
 
 #######################################################################################################################
   def get_measurements(self, elements = [ 'info', 'stats' ], consolidate_function = avg_list, update_from_system:bool=True) :
-    if update_from_system or len(self.__stats_keys__) < 1 :
+    if update_from_system :
       self.update_from_system(elements = elements)
 
     to_be_added = {'measurement' : 'lparstat', 'tags' : { 'host' : self.data['info']['node_name'] }, 'fields' : { },  'time' : datetime.datetime.utcnow().isoformat()  }

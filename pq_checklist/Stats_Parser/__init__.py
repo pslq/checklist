@@ -2,9 +2,10 @@
 
 # All imports used
 from __future__ import absolute_import, division, print_function
-from . import get_command_output, debug_post_msg, try_conv_complex, line_cleanup, avg_list
+from .. import get_command_output, debug_post_msg, try_conv_complex, line_cleanup, avg_list
 from collections import defaultdict
-import concurrent.futures
+from ._parse_net_v_stat_stats import parse_net_v_stat_stats
+from ._parse_entstat_stats import parse_entstat_stats
 
 
 
@@ -19,14 +20,11 @@ class StatsParser() :
     self.logger         = logger
     self.cwd            = cwd
     self.bos_data       = bos_data
-    self.commands       = {}
-    self.functions      = {}
-    self.data           = { 'info' : defaultdict(lambda: -1), 'stats' : defaultdict(lambda: -1) }
+    self.commands       = { 'linux' : defaultdict(lambda: '/bin/true'), 'aix' : defaultdict(lambda: '/bin/true') }
+    self.functions      = { 'linux' : defaultdict(lambda: '/bin/true'), 'aix' : defaultdict(lambda: '/bin/true') }
+    self.data           = {}
     self.file_sources   = {}
     self.only_on_localhost = False # Load the collector only on localnode
-
-    # Internal list to hold all keys used when parsing lparstat data
-    self.__stats_keys__ = []
 
     return(None)
 
@@ -58,7 +56,15 @@ class StatsParser() :
     return(self.data.keys())
 
 #######################################################################################################################
-  def update_from_dict(self, data:dict) -> None :
+  def parse_net_v_stat_stats(self, data:list, has_paragraphs:bool=True) -> dict:
+    return(parse_net_v_stat_stats(self.logger,data,has_paragraphs=has_paragraphs))
+
+  def parse_entstat_stats(self,data:list, only_numeric:bool=True) -> dict :
+    return(parse_entstat_stats(self.logger,data, only_numeric=only_numeric))
+
+
+#######################################################################################################################
+  def update_from_dict(self, data:dict, debug:bool=False) -> None :
     '''
     Instead of load data from the local system, parse data gattered through ansible in order to issue measurements
 
@@ -73,6 +79,8 @@ class StatsParser() :
     for element in data :
       if element['task'] in self.file_sources :
         self.file_sources[element['task']](element['stdout_lines'])
+      elif debug :
+        debug_post_msg(self.logger, '%s not present into file_sources'%element['task'])
 
     return(None)
 
@@ -88,11 +96,11 @@ class StatsParser() :
     except :
       pass
     # In case commands dict still not initialized
-    if len(self.commands.keys()) == 0 and "update_commands" in self.__dir__() :
+    if len(self.commands[self.bos_data.os].keys()) == 0 and "update_commands" in self.__dir__() :
       self.update_commands()
     # If no element is passed, collect data from all of them
     if len(elements) == 0 :
-      elements = [ c for c in self.commands.keys() if c in self.functions ]
+      elements = [ c for c in self.commands[self.bos_data.os].keys() if c in self.functions ]
 
     for i in elements :
       self.load_from_system(command_id = i)
@@ -118,7 +126,7 @@ class StatsParser() :
 
     if command_id :
       if not parse_function and command_id in self.functions :
-        parse_function = self.functions[command_id]
+        parse_function = self.functions[self.bos_data.os][command_id]
 
       cmd_out = get_command_output(command        =self.commands[command_id],
                                    cwd            = self.cwd,
@@ -176,174 +184,6 @@ class StatsParser() :
           ret = parse_function(ret)
     except Exception as e :
       debug_post_msg(self.logger, 'Error opening %s : %s'%(filename,e))
-    return(ret)
-
-#######################################################################################################################
-  def parse_entstat_stats(self,data:list, only_numeric:bool=True) -> dict :
-    '''
-    Parse entstat like files
-    Parameters :
-      data -> list : list with all lines of entstat contents
-      only_numeric -> bool : [True,False] Add only numeric values into the return dict
-
-    Returns:
-      dict with entstat contents
-    '''
-    ret = {}
-    cur_ent = ''
-    inner_key = ''
-    inner_keys = {
-        "Transmit Statistics:" : 'transmit_stats',
-        "General Statistics:" : 'general_stats',
-        'Statistics for every adapter in the IEEE 802.3ad Link Aggregation' : 'general_lacp',
-        "IEEE 802.3ad Port Statistics" : "lacp_port_stats",
-        'Device Statistics' : 'dev_stats',
-        "Additional Statistics" : 'addon_stats',
-        "Virtual I/O Ethernet Adapter (l-lan) Specific Statistics:" : 'veth_stats'
-        }
-    append_prefix = {
-        'transmit_stats' : [ 'transmit', 'receive' ],
-        'general_stats' : [],
-        'general_lacp' : [],
-        "lacp_port_stats" : [ "actor_state", "partner_state"],
-        'dev_stats' : [],
-        'addon_stats' : [],
-        'veth_stats' : []
-        }
-
-    # Small function to cleanup the string that wull be used as key
-    def construct_key(st:str) -> str :
-      c_key = st
-      for str_to_replace in ( '(', '<', '>', ')', '/', '\'', ' ', '[', ']', '+') :
-        st = st.replace(str_to_replace,'_')
-      c_key = st.lower()
-      return(c_key)
-
-    # Small function to create a string out of a list
-    def contruct_string(lst:list,st:int,ed:int) -> str:
-      ret = ' '.join([ lst[v] for v in range(st,len(lst)-abs(ed)) ]).strip()
-      return(ret)
-
-    # Begin process the list
-    try :
-      inner_key = ''
-      lacp_key_index = 0
-      for ln in line_cleanup(data, remove_endln=True) :
-        inner_finder = False
-        key,val = [],[]
-        lp = ln.split(':')
-        # Get inner key
-        for k in inner_keys.keys() :
-          if k in ln :
-            inner_key = inner_keys[k]
-            inner_finder = True
-            break
-        if not inner_finder :
-          # Get interface name
-          if ln.startswith("ETHERNET STATISTICS") :
-            cur_ent = ln.split(' ')[2].replace('(','').replace(')','')
-            ret[cur_ent] = {}
-          # Get hwaddr
-          elif ln.startswith("Hardware Address") :
-            inner_lp = ln.split(' ')
-            key.append(construct_key("Hardware Address"))
-            val.append(inner_lp[2].strip())
-          # If : into the line, likely is a line with dev stats
-          elif ln.count(':') == 2 :
-            key.append(construct_key(lp[0].strip()))
-            inner_lp = lp[1].strip().split(' ')
-
-            if inner_lp[0].isnumeric() :
-              val.append(try_conv_complex(inner_lp[0].strip()))
-              key.append(construct_key(contruct_string(inner_lp,1,0)))
-            else :
-              val.append(try_conv_complex(inner_lp[-1].strip()))
-              key.append(construct_key(contruct_string(inner_lp,0,-1)))
-            val.append(try_conv_complex(lp[-1].strip()))
-            if len(key) > 1 and len(set(key)) == 1 :
-              for p,v in enumerate(append_prefix[inner_key]) :
-                if v not in key[p] :
-                  key[p] = v+'_'+key[p]
-
-          # If : into the line, likely is a line with dev stats
-          elif ln.count(':') == 1 :
-            if lp[0].isnumeric() :
-              val.append(try_conv_complex(lp[0].strip()))
-              key.append(construct_key(contruct_string(lp,1,0)))
-            else :
-              val.append(try_conv_complex(lp[1].strip()))
-              key.append(construct_key(contruct_string(lp,0,-1)))
-
-            # Hack to properly handle LACP session
-            if inner_key == "lacp_port_stats" :
-              if inner_key not in ret[cur_ent] :
-                ret[cur_ent][inner_key] = {}
-              if "Actor State" in ln :
-                lacp_key_index = 0
-              elif "Partner State" in ln :
-                lacp_key_index = 1
-              if not any([ v in ln for v in ( "Partner", "Actor" ) ]) :
-                for k,v in zip(key,val) :
-                  if v != '' or ( only_numeric and not isinstance(v, str) ):
-                    try :
-                      ret[cur_ent][inner_key][append_prefix[inner_key][lacp_key_index]][k] = v
-                    except :
-                      ret[cur_ent][inner_key][append_prefix[inner_key][lacp_key_index]] = { k : v }
-                key,val = [],[]
-
-        # Populate return dict
-        for k,v in zip(key,val) :
-          if len(k) > 0 and ((not only_numeric and len(v) > 0) or ( only_numeric and isinstance(v, (int, float, complex)) and not isinstance(v, bool))) :
-            if len(inner_key) > 0 :
-              try :
-                ret[cur_ent][inner_key][k] = v
-              except :
-                ret[cur_ent][inner_key] = { k : v }
-            else :
-              try :
-                ret[cur_ent][k] = v
-              except :
-                ret[cur_ent] = { k : v }
-
-    except Exception as e :
-      debug_post_msg(self.logger, 'Error in parse_entstat_stats : %s'%e)
-    return(ret)
-#######################################################################################################################
-  def parse_net_v_stat_stats(self, data:list, has_paragraphs:bool=True) -> dict:
-    '''
-    Parse aix's "netstat -s" like files
-
-    Parameters:
-      data           : list -> List of strings to be parsed ( loaded from either command output of file )
-      has_paragraphs : bool -> If the file contents has paragraphs ( like netstat -s )
-
-    Returns:
-      dict
-    '''
-    ret = {}
-    cur_key = ''
-    exclude = ( '(', '<', '>', ')', '/', '\'' )
-    for ln in line_cleanup(data, remove_endln=True) :
-      sp = ln.split(' ')
-      if len(sp) == 1 and sp[0].endswith(':') and has_paragraphs :
-        cur_key = sp[0].rstrip(':')
-      else :
-        key,val = 1,0
-        if sp[-1].isnumeric() :
-          key,val = 0,-1
-        kt = '_'.join([ sp[v] for v in range(key,len(sp)-abs(val)) if not any([ Z in sp[v] for Z in exclude]) ]).lower().replace('.', '').replace(':','').replace(',','')
-        vn = try_conv_complex(sp[val])
-        if len(kt) > 0 and len(str(vn)) > 0 :
-          # Quick fix due the miss behavior of netstat
-          if 'ack' in kt and kt[-1].isalnum() :
-            kt = 'ack_for_bytes'
-          if has_paragraphs :
-            try :
-              ret[cur_key][kt] = vn
-            except :
-              ret[cur_key] = { kt : vn }
-          else :
-            ret[kt] = vn
     return(ret)
 
 #######################################################################################################################

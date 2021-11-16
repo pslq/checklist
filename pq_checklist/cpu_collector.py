@@ -23,11 +23,12 @@ class collector(Base_collector) :
     self.min_core_pool_warn                        = float(self.config['CPU']['min_core_pool_warn'])
     self.samples                                   = self.config['CPU']['samples']
     self.interval                                  = self.config['CPU']['interval']
-    self.to_collectors                             = dict(logger = self.logger, samples = self.config['CPU']['samples'],
-                                                          interval = self.config['CPU']['interval'], cwd = self.cwd, bos_data = self.bos_data)
 
-    self.providers = { 'lparstat' : lparstat_parser(**self.to_collectors),
-                       'mpstat'   : mpstat_parser(**self.to_collectors) }
+
+
+    self.providers = { 'lparstat' : lparstat_parser(**self.general_parameters),
+                       'mpstat'   : mpstat_parser(**self.general_parameters) }
+
 
     return(None)
 
@@ -49,15 +50,26 @@ class collector(Base_collector) :
     # Local variable naming ( facilitate coding )
     mpstat, lparstat = self.providers['mpstat'], self.providers['lparstat']
 
+    involuntarycorecontextswitch_ratio = -1
     # Process mpstat health
-    involuntarycontextswitch_ratio     = avg_list(mpstat.data['stats']['ics'])/avg_list(mpstat.data['stats']['cs'])
+    if 'ics' in mpstat.data['stats'] :
+      involuntarycontextswitch_ratio     = avg_list(mpstat.data['stats']['ics'])/avg_list(mpstat.data['stats']['cs'])
+    else :
+      # On Linux:
+      # find [0-9]* -maxdepth 1 -name "status"  -exec egrep 'voluntary_ctxt_switches|nonvoluntary_ctxt_switches' {} \;
+      involuntarycontextswitch_ratio     = -1
+
     if 'ilcs' in mpstat.data['stats'] :
       involuntarycorecontextswitch_ratio = avg_list(mpstat.data['stats']['ilcs'])/avg_list(mpstat.data['stats']['vlcs'])
-    else :
-      involuntarycorecontextswitch_ratio = -1
+    elif 'CPU' in mpstat.data['stats'] :
+      if 'steal' in mpstat.data['stats']['CPU']['all'] :
+        involuntarycorecontextswitch_ratio = mpstat.data['stats']['CPU']['all']['steal']
 
     # Calculate peak cpu utilization
-    cur_cpu_utilization = max([sum([ avg_list(lparstat.data['stats'][v]) for v in [ 'sys', 'wait', 'user' ] ]), sum([ avg_list(mpstat.data['stats'][v]) for v in [ 'sy', 'wa', 'us' ] ])])
+    if 'sy' in mpstat.data['stats'] :
+      cur_cpu_utilization = max([sum([ avg_list(lparstat.data['stats'][v]) for v in [ 'sys', 'wait', 'user' ] ]), sum([ avg_list(mpstat.data['stats'][v]) for v in [ 'sy', 'wa', 'us' ] ])])
+    else :
+      cur_cpu_utilization =  100-avg_list(mpstat.data['stats']['CPU']['all']['idle'])
 
     if cur_cpu_utilization >= self.cpu_max_usage_warn and self.cpu_max_usage_warn != -1 :
       if 'shared' in lparstat.data['info']['type'] and \
@@ -66,7 +78,7 @@ class collector(Base_collector) :
           involuntarycorecontextswitch_ratio > self.involuntarycorecontextswitch_ratio_target :
         ret_messages.append('High CPU utilization detected along with possible core starvation of the lpar, due high ilcs vs vlcs ratio, values : %f %f'%(cur_cpu_utilization,involuntarycorecontextswitch_ratio))
       if self.involuntarycontextswitch_ratio_target != -1 and involuntarycontextswitch_ratio <= involuntarycontextswitch_ratio :
-        ret_messages.append( 'High CPU utilization detected along with possible cpu starvation of the lpar, due high cs vs ics ratio, values : %f %f'%(cur_cpu_utilization,involuntarycontextswitch_ratio))
+        ret_messages.append('High CPU utilization detected along with possible cpu starvation of the lpar, due high cs vs ics ratio, values : %f %f'%(cur_cpu_utilization,involuntarycontextswitch_ratio))
       else :
         ret_messages.append('High CPU utilization detected, values : %f'%(cur_cpu_utilization))
     elif self.cpu_min_usage_warn != -1 and cur_cpu_utilization <= self.cpu_min_usage_warn :
@@ -78,7 +90,7 @@ class collector(Base_collector) :
       if actual_rq / thread_count > self.rq_relative_100pct :
         ret_messages.append('High run queue detected on the server, value %f'%(actual_rq))
 
-    if 'app' in lparstat.data['stats'].keys() :
+    if 'app' in lparstat.data['stats'] :
       actual_app = avg_list(lparstat.data['stats']['app'])
       if actual_app <= self.min_core_pool_warn and self.min_core_pool_warn != -1 :
         ret_messages.append('Shared processor pool near its capacity limit, value %f'%(actual_app))

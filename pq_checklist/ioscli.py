@@ -10,16 +10,34 @@ import csv, datetime
 from .Stats_Parser import StatsParser
 
 class parser(StatsParser) :
-  def __init__(self, logger = None, cwd = '/tmp', bos_data = None, samples = 2, interval = 1):
+  def __init__(self, logger = None, cwd = '/tmp', bos_data = None):
     '''
     '''
     super().__init__(logger = logger, cwd = cwd, bos_data = bos_data)
+    self.commands = { }
+    self.functions = { }
 
-    self.data['stats'] = {}
+    self.data = { 'stats' : {} }
 
     self.file_sources = {
         'entstat' : self.parse_entstat_d_from_dict,
     }
+
+    self.commands = /usr/ios/cli/ioscli
+
+    self.commands = {
+        'stats_fcstat_client' : "/usr/ios/cli/ioscli fcstat -client"
+        }
+    self.functions = {
+        'stats' : self.parse_mpstat_stats
+        }
+
+    self.file_sources = {
+        'mpstat_a' : self.parse_mpstat_stats
+        }
+
+/usr/sbin/vnicstat [-b][-d][-r] <vnicserverX>
+
 
     return(None)
 
@@ -29,15 +47,11 @@ class parser(StatsParser) :
     '''
     try :
       # In case self.commands and self.functions hasn't been populated yet
-      for dev in self.bos_data['dev_class']['if'] :
-        key = 'stats_%s'%dev
-        self.commands['aix'][key] = "entstat -d %s"%dev
-        self.functions['aix'][key] = self.parse_entstat_d
       for dev in self.bos_data['dev_class']['adapter'] :
-        if 'ent' in dev :
-          key = 'stats_%s'%dev
-          self.commands['aix'][key] = "entstat -d %s"%dev
-          self.functions['aix'][key] = self.parse_entstat_d
+        if 'ent' in dev and :
+          key = 'stats_seastat_%s'%dev
+          self.commands[key] = "/usr/ios/cli/ioscli seastat -d %s -n"%dev
+          self.functions[key] = self.parse_seastat
     except Exception as e :
       debug_post_msg(self.logger, 'Error loading device specific commands, possibly bos_data not initialized : %s'%e, raise_type=Exception)
 

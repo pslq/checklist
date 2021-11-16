@@ -491,7 +491,7 @@ class collector(OracleConnection) :
         else :
           ret[con_seq][row['dgname']]['config']['inst_id'] = [ row['inst_id'] ]
     for con_seq, data in self.get_remote_query('ve_asm_disk_stat.sql', from_cache=from_cache).items() :
-      if con_seq not in :
+      if con_seq not in ret :
         ret[con_seq] = {}
       for row in data['data'] :
         if row['dg_name'] not in ret[con_seq]:
