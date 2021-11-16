@@ -6,6 +6,7 @@ from .. import get_command_output, debug_post_msg, try_conv_complex, line_cleanu
 from collections import defaultdict
 from ._parse_net_v_stat_stats import parse_net_v_stat_stats
 from ._parse_entstat_stats import parse_entstat_stats
+import os
 
 
 
@@ -20,6 +21,7 @@ class StatsParser() :
     self.logger         = logger
     self.cwd            = cwd
     self.bos_data       = bos_data
+    self.iambos         = False
     self.commands       = { 'linux' : defaultdict(lambda: '/bin/true'), 'aix' : defaultdict(lambda: '/bin/true') }
     self.functions      = { 'linux' : defaultdict(lambda: '/bin/true'), 'aix' : defaultdict(lambda: '/bin/true') }
     self.data           = {}
@@ -90,20 +92,20 @@ class StatsParser() :
     Collect data from the system for specific elements ( objects )
     '''
     # In case bos still empty
-    try :
-      if len(self.bos_data.data['dev_class']) == 0 :
-        self.bos_data.update_from_system()
-    except :
-      pass
-    # In case commands dict still not initialized
-    if len(self.commands[self.bos_data.os].keys()) == 0 and "update_commands" in self.__dir__() :
-      self.update_commands()
-    # If no element is passed, collect data from all of them
-    if len(elements) == 0 :
-      elements = [ c for c in self.commands[self.bos_data.os].keys() if c in self.functions ]
+    run_os = None
+    if self.bos_data :
+      run_os = self.bos_data.data['bos']['os']
+    elif self.iambos :
+      run_os = 'aix' if 'aix' in os.sys.platform else os.sys.platform
+    if run_os :
+      if self.bos_data :
+        if len(self.bos_data.data['dev_class']) == 0 :
+          self.bos_data.update_from_system()
+      if len(self.commands[run_os].keys()) == 0 and "update_commands" in self.__dir__() :
+        self.update_commands()
 
-    for i in elements :
-      self.load_from_system(command_id = i)
+      for i in elements if len(elements) > 0 else self.commands[run_os].keys() :
+        self.load_from_system(command_id = i)
     return(self.data)
 
 #######################################################################################################################
@@ -123,16 +125,28 @@ class StatsParser() :
     '''
     ret = None
     cmd_out = { 'retcode' : -1 }
+    run_os = None
 
     if command_id :
-      if not parse_function and command_id in self.functions :
-        parse_function = self.functions[self.bos_data.os][command_id]
+      if self.bos_data :
+        run_os = self.bos_data.data['bos']['os']
+      elif self.iambos :
+        run_os = 'aix' if 'aix' in os.sys.platform else os.sys.platform
+    if run_os :
+      if not parse_function and command_id in self.functions[run_os] :
+        parse_function = self.functions[run_os][command_id]
 
-      cmd_out = get_command_output(command        =self.commands[command_id],
-                                   cwd            = self.cwd,
-                                   pq_logger      = self.logger)
-      if cmd_out['retcode'] == 0 :
-        ret = parse_function(cmd_out['stdout'])
+      if parse_function :
+        cmd_out = get_command_output(command        =self.commands[run_os][command_id],
+                                     cwd            = self.cwd,
+                                     pq_logger      = self.logger)
+        if cmd_out['retcode'] == 0 :
+          try :
+            ret = parse_function(cmd_out['stdout'])
+          except Exception as e :
+            debug_post_msg(self.logger,'Error during parsing function : %s : %s : %s'%(e,run_os,command_id))
+        else :
+          debug_post_msg(self.logger,'Error executing command %s : %s : %s'%(self.commands[run_os][command_id],str(cmd_out['stdout']), str(cmd_out['stderr'])))
     else :
       debug_post_msg(self.logger,'Empty command_id, command execution not possible, possible command ids: %s'%(str(self.functions.keys())), raise_type=Exception)
 

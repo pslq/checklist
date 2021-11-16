@@ -70,6 +70,8 @@ class bos(StatsParser) :
         'smtctl_c' : self.parse_smtctl
         }
 
+    self.iambos = True
+
 
     return(None)
 

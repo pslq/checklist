@@ -92,7 +92,7 @@ class collector(Base_collector) :
       '''
       ret = True
       if ( nodename == l_col.nodename and l_col.only_on_localhost == local_only == True ) or \
-         ( local_only == l_col.only_on_localhost == False and nodename != l_col.nodename ) :
+         not l_col.only_on_localhost :
         self.collectors[nodename][pos] = l_col
         ret = l_col.only_on_localhost
       return(ret)
