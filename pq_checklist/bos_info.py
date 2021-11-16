@@ -17,7 +17,7 @@ class bos(StatsParser) :
     super().__init__(logger = logger, cwd = cwd)
     self.data = { 'dev' : {},
                   'dev_class' : {},
-                  'bos' : { 'os' : os.sys.platform },
+                  'bos' : { 'os' : 'aix' if 'aix' in os.sys.platform else os.sys.platform },
                   'smt' : { 'cpu_count' : os.cpu_count()/2, 'thread_count' : 2 }  }
 
     self.preserv_stats  = preserv_stats
