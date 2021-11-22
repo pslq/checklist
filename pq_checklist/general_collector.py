@@ -5,7 +5,7 @@ from .Base_collector import Base_collector
 from . import ansible_helper
 from time import time
 from .db_client import db_client
-from . import net_collector, cpu_collector, dio_collector, oracle_collector
+from . import net_collector, cpu_collector, dio_collector, oracle_collector, vio_collector
 
 
 #######################################################################################################################
@@ -69,6 +69,7 @@ class collector(Base_collector) :
     cols = { 'net' : net_collector.collector,
              'cpu' : cpu_collector.collector,
              'dio' : dio_collector.collector,
+             'vio' : vio_collector.collector,
              'oracle' : oracle_collector.collector
              }
 
@@ -166,6 +167,10 @@ class collector(Base_collector) :
         'dio' : [
           [ 'iostat_LINUX', 'iostat_AIX', 'fcstat' ],
           [ [ 'fcstat', 'adapters' ] ]
+          ],
+        'vio' : [
+          [ 'vnicstat' ],
+          [ [ 'vnicstat', 'adapters' ] ]
           ],
         'oracle' : [[],[]]
         }

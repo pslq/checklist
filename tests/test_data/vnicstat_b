@@ -1,0 +1,358 @@
+
+--------------------------------------------------------------------------------
+VNIC Server Statistics: vnicserver1
+--------------------------------------------------------------------------------
+Device Statistics:
+------------------                      
+State: active
+Backing Device Name: ent34
+
+Failover State: active
+Failover Readiness: operational
+Failover Priority: 50
+
+Client Partition ID: 32
+Client Partition Name: ppa1tsm00010
+Client Operating System: AIX
+Client Device Name: ent1
+Client Device Location Code: U9080.M9S.8205C8T-V32-C2
+
+Main CRQ Statistics:
+--------------------                    
+State: open                             Error Indications: 191
+Commands Received: 5944439
+Commands Sent: 5944638                  Adapter Problem: 0
+Interrupts: 5944446                     Firmware Problem: 0
+Command Response Errors: 191            Device Driver Problem: 191
+Link State Indications: 4               EEH Recovery: 0
+ACL Change Indications: 0               Firmware Updated: 0
+Login Requests: 4                       Low Memory: 0
+Reboots: 3
+
+RX/TX statistics:
+-----------------                       
+TX:                                     RX:
+---                                     ---                                     
+Client Descriptors: 8824120460          Client Descriptors: 139036109241
+VF Descriptors: 8686658819              VF Descriptors: 139036109241
+Max VF Descriptors Queued: 4092
+Client Completions: 135729041           Client Completions: 139036105145
+VF Completions: 135729041               VF Completions: 139036105145
+Client Completions Error: 0             Client Completions Error: 0
+VF Completions Error: 0                 VF Completions Error: 0
+TCE Passed to VF : 8686658819
+TCE Mappings: 0                         TCE Mappings: 0
+TCE Unmappings: 0                       TCE Unmappings: 0
+Descriptors Pool Full: 0                Descriptors Pool Empty: 43001
+
+
+-------------------------------------------------------------
+
+PCIe3 4-Port 10GbE SR Adapter VF 
+-------------------------------------------------------------
+
+Device Statistics:
+------------------
+Device ID: df1028e21410e304
+Version: 1
+Physical Port Link Status: Up
+Logical Port Link Status: Up
+Physical Port Speed: 10 Gbps Full Duplex
+PCI Mode: PCI-Express Unknown
+	PCIe Link Speed: Unknown
+	TLP Size: 512
+	MRR Size: 4096
+	Relaxed Ordering: Disabled
+Assigned Interrupt Source Numbers: 4
+	776	NIC TX,RX; MGT
+	777	NIC TX,RX
+	778	NIC TX,RX
+	779	NIC TX,RX
+Unassigned Interrupt Source Numbers: 0
+External Loopback Changeable: No
+External Loopback: Disabled
+Internal Loopback: Disabled
+Physical Port Promiscuous Mode Changeable: Yes
+Physical Port Promiscuous Mode: Disabled
+Logical Port Promiscuous Mode: Disabled
+Physical Port All Multicast Mode Changeable: Yes
+Physical Port All Multicast Mode: Disabled
+Logical Port All Multicast Mode: Disabled
+Multicast Addresses Enabled: 8
+Maximum Exact Match Multicast Filters: 10
+Maximum Inexact Match Multicast Filters: 0
+Physical Port MTU Changeable: Yes
+Physical Port MTU: 1514
+Logical Port MTU: 1514
+Jumbo Frames: Enabled
+Port VLAN (Priority:ID): 0:0153
+MAC ACL Status: Disabled
+VLAN ACL Status: Disabled
+Enabled VLAN IDs: None
+Maximum DMA Page Size: 4096
+Transmit and receive flow control status: Enabled
+	Number of XOFF packets transmitted: 0
+	Number of XON packets transmitted: 0
+	Number of XOFF packets received: 0
+	Number of XON packets received: 0
+Receive TCP Segment Aggregation: Enabled
+	Receive TCP Segment Aggregation Large Packets Created: 0
+	Receive TCP Packets Aggregated into Large Packets: 0
+	Receive TCP Payload Bytes Aggregated into Large Packets: 0
+	Receive TCP Segment Aggregation Average Packets Aggregated: 0
+	Receive TCP Segment Aggregation Maximum Packets Aggregated: 0
+Transmit TCP Segmentation Offload: Enabled
+	Transmit TCP Segmentation Offload Packets Transmitted: 0
+	Transmit TCP Segmentation Offload Maximum Packet Size: 0
+	Minimum MSS Mode: Adjust
+	Minimum MSS Size: 224
+	Minimum MSS Packets: 0
+Transmit Cumulative Statistics:
+	Transmit Padded Packets: 0
+Transmit Q0 Statistics:
+	Transmit Q Packets: 2256133156
+	Transmit Q Multicast Packets: 0
+	Transmit Q Broadcast Packets: 0
+	Transmit Q Flip and Run Packets: 0
+	Transmit Q Bytes: 406907022930
+	Transmit Q No Buffers: 0
+	Transmit Q Dropped Packets: 0
+	Transmit SWQ Cur Packets: 0
+	Transmit SWQ Max Packets: 0
+	Transmit SWQ Dropped Packets: 0
+	Transmit OFQ Cur Packets: 0
+	Transmit OFQ Max Packets: 0
+Transmit Q1 Statistics:
+	Transmit Q Packets: 2437172885
+	Transmit Q Multicast Packets: 0
+	Transmit Q Broadcast Packets: 0
+	Transmit Q Flip and Run Packets: 0
+	Transmit Q Bytes: 786785700053
+	Transmit Q No Buffers: 0
+	Transmit Q Dropped Packets: 0
+	Transmit SWQ Cur Packets: 0
+	Transmit SWQ Max Packets: 0
+	Transmit SWQ Dropped Packets: 0
+	Transmit OFQ Cur Packets: 0
+	Transmit OFQ Max Packets: 0
+Transmit Q2 Statistics:
+	Transmit Q Packets: 2071266749
+	Transmit Q Multicast Packets: 0
+	Transmit Q Broadcast Packets: 0
+	Transmit Q Flip and Run Packets: 0
+	Transmit Q Bytes: 397377813517
+	Transmit Q No Buffers: 0
+	Transmit Q Dropped Packets: 0
+	Transmit SWQ Cur Packets: 0
+	Transmit SWQ Max Packets: 0
+	Transmit SWQ Dropped Packets: 0
+	Transmit OFQ Cur Packets: 0
+	Transmit OFQ Max Packets: 0
+Transmit Q3 Statistics:
+	Transmit Q Packets: 1922086069
+	Transmit Q Multicast Packets: 0
+	Transmit Q Broadcast Packets: 0
+	Transmit Q Flip and Run Packets: 0
+	Transmit Q Bytes: 357331748908
+	Transmit Q No Buffers: 0
+	Transmit Q Dropped Packets: 0
+	Transmit SWQ Cur Packets: 0
+	Transmit SWQ Max Packets: 0
+	Transmit SWQ Dropped Packets: 0
+	Transmit OFQ Cur Packets: 0
+	Transmit OFQ Max Packets: 0
+Receive Q0 Statistics:
+	Receive Q Packets: 289768380
+	Receive Q Multicast Packets: 0
+	Receive Q Broadcast Packets: 0
+	Receive Q Bytes: 83561505924
+	Receive Q No Buffers: 0
+	Receive Q Errors: 0
+	Receive Q Dropped Packets: 0
+Receive Q1 Statistics:
+	Receive Q Packets: 64911547005
+	Receive Q Multicast Packets: 0
+	Receive Q Broadcast Packets: 0
+	Receive Q Bytes: 96854161926502
+	Receive Q No Buffers: 0
+	Receive Q Errors: 0
+	Receive Q Dropped Packets: 0
+Receive Q2 Statistics:
+	Receive Q Packets: 34858310559
+	Receive Q Multicast Packets: 0
+	Receive Q Broadcast Packets: 0
+	Receive Q Bytes: 51995340431692
+	Receive Q No Buffers: 0
+	Receive Q Errors: 0
+	Receive Q Dropped Packets: 0
+Receive Q3 Statistics:
+	Receive Q Packets: 38976479984
+	Receive Q Multicast Packets: 0
+	Receive Q Broadcast Packets: 0
+	Receive Q Bytes: 58330425280719
+	Receive Q No Buffers: 0
+	Receive Q Errors: 0
+	Receive Q Dropped Packets: 0
+
+Additional Statistics:
+----------------------
+SLI PORT Event Counters: 
+	Error Events: 0
+	Over-Temp Events: 0
+	Norm-Temp Events: 0
+	NVLOG Events: 0
+	Out of RQE Events: 0
+	Solicited Events: 0
+Adapter Physical Port Counters: 
+	Total Number of Packets Sent: 9599168415
+	Number of Unicast Packets Sent: 9598865420
+	Number of Multicast Packets Sent: 290861
+	Number of Broadcast Packets Sent: 12134
+	Total Bytes Sent: 2086193148440
+	Number of Unicast Bytes Sent: 587177547738
+	Number of Multicast Bytes Sent: 31802210
+	Number of Broadcast Bytes Sent: 1113884
+	Number of TX Packets without Errors Discarded: 0
+	Number of TX Packets with Errors Dropped: 0
+	Number of Pause Frames Sent: 610911
+	Number of Pause ON Frames Sent: 556094
+	Number of Pause OFF Frames Sent: 54817
+	Number of Frames Failed due to Internal MAC TX Error: 0
+	Number of MAC Control Frames Sent: 610911
+	Number of 64-Byte Packets Sent: 611848
+	Number of 65-127 Byte Packets Sent: 8616701398
+	Number of 128-255 Byte Packets Sent: 7672938
+	Number of 256-511 Byte Packets Sent: 9847647
+	Number of 512-1023 Byte Packets Sent: 4911478
+	Number of 1024-1518 Byte Packets Sent: 4917967
+	Number of 1519-2047 Byte Packets Sent: 955116050
+	Number of 2048-4095 Byte Packets Sent: 0
+	Number of 4096-8191 Byte Packets Sent: 0
+	Number of 8192-9216 Byte Packets Sent: 0
+	Number of LSO Packets Sent: 45103811
+	Total Number of Packets Received: 139490905547
+	Number of Unicast Packets Received: 139136556926
+	Number of Multicast Packets Received: 64582444
+	Number of Broadcast Packets Received: 289766177
+	Total Bytes Received: 208608936177930
+	Number of Unicast Bytes Received: 208512066387658
+	Number of Multicast Bytes Received: 11118403545
+	Number of Broadcast Bytes Received: 85751386727
+	Number of Packets Received and Dropped due to Unknown Protocol: 0
+	Number of Received Packets without Errors Discarded: 9161300
+	Number of Received Packets with Errors Dropped: 0
+	Number of Packets Received with CRC/FCS Error: 0
+	Number of Frames Received with Alignment Error: 0
+	Number of Packets Received with Symbol Error: 0
+	Number of Pause Frames Received: 0
+	Number of Pause ON Frames Received: 0
+	Number of Pause OFF Frames Received: 0
+	Number of Frames Received that Exceed the Maximum Permitted Frame Size: 0
+	Number of Frames Failed due to Internal MAC RX Error: 0
+	Number of Packets Received That Were Less Than 64 Octets: 0
+	Number of Packets Received That Were Longer Than 1518 Octets: 2402841536
+	Number of JABBER Packets Received: 0
+	Number of Fragment Packets Received: 0
+	Number of MAC Control Frames Received: 0
+	Number of MAC Control Frames Received with Unknown Opcode: 0
+	Number of Packets Received with Out of Range Errors: 0
+	Number of Packets Received with In Range Errors : 0
+	Number of Receive VLAN Mismatch Errors: 0
+	Number of Receive Address Match Errors: 382534093
+	Number of Received Packets Too Short and Dropped (IP Length < IP Header Len): 39314
+	Number of Received Packets Too Small and Dropped (IP Length > Pkt Len): 0
+	Number of Received Packets Dropped due to Invalid TCP Length: 102
+	Number of Received Packets with Too Small Headers and Dropped: 0
+	Number of Received Packets with IP Checksum Errors: 119
+	Number of Received RUNT Packets Dropped: 0
+	Number of Received Packets with UDP Checksum Errors: 117
+	Number of Received Packets with TCP Checksum Errors: 39286
+	Number of Non-RSS Packets Received: 420881706
+	Number of IPv4 Packets Received: 135345660890
+	Number of IPv6 Packets Received: 4085543697
+	Number of IPv4 Bytes Received: 202678985664821
+	Number of IPv6 Bytes Received: 5909710869745
+	Number of NIC-Only Packets Received: 2042790776
+	Number of TCP Packets Received: 0
+	Number of iSCSI Packets Received: 0
+	Number of Management Packets Received: 0
+	Number of Unicast Packets Received and Switched: 0
+	Number of Multicast Packets Received and Switched: 79011
+	Number of Broadcast Packets Received and Switched: 0
+	Number of Forwarded Packets: 0
+	Number of Times Receive FIFO Overflow Occurred: 0
+	Number of Received Packets Dropped due to Too Many Fragments: 0
+	Number of Received Packets Dropped due to Invalid Queue: 0
+	Number of Received Packets Dropped due to MTU limit Exceeded: 0
+	Number of 64 Byte Packets Received: 58701649
+	Number of 65-127 Byte Packets Received: 1244362504
+	Number of 128-255 Byte Packets Received: 78719503
+	Number of 256-511 Byte Packets Received: 307401329
+	Number of 512-1023 Byte Packets Received: 1879314688
+	Number of 1024-1518 Byte Packets Received: 375578162
+	Number of 1519-2047 Byte Packets Received: 135545880381
+	Number of 2048-4095 Byte Packets Received: 36729
+	Number of 4096-8191 Byte Packets Received: 52291
+	Number of 8192-9216 Byte Packets Received: 858311
+Adapter Logical Port Counters: 
+	Total Number of Packets Sent: 9599431640
+	Number of Unicast Packets Sent: 9598849764
+	Number of Multicast Packets Sent: 569742
+	Number of Broadcast Packets Sent: 12134
+	Total Bytes Sent: 2086182221334
+	Number of Unicast Bytes Sent: 2086118629082
+	Number of Multicast Bytes Sent: 62478368
+	Number of Broadcast Bytes Sent: 1113884
+	Number of TX Packets without Errors Discarded: 0
+	Number of TX Packets with Errors Dropped: 0
+	Number of 64-Byte Packets Sent: 937
+	Number of 65-127 Byte Packets Sent: 8616980279
+	Number of 128-255 Byte Packets Sent: 7657282
+	Number of 256-511 Byte Packets Sent: 9847647
+	Number of 512-1023 Byte Packets Sent: 4911478
+	Number of 1024-1518 Byte Packets Sent: 4910681
+	Number of 1519-9699 Byte Packets Sent: 955123336
+	Number of Packets of Size Larger Than 9699 Bytes Sent: 0
+	Total Number of Packets Received: 139036114862
+	Number of Unicast Packets Received: 138744840889
+	Number of Multicast Packets Received: 1523000
+	Number of Broadcast Packets Received: 289750973
+	Total Bytes Received: 207263489076121
+	Number of Unicast Bytes Received: 207179764718239
+	Number of Multicast Bytes Received: 163899118
+	Number of Broadcast Bytes Received: 83560458764
+	Number of Received Packets without Errors Discarded: 8982
+	Number of Received Packets with Errors Dropped: 8984
+	Number of 64 Byte Packets Received: 233217917
+	Number of 65-127 Byte Packets Received: 816474749
+	Number of 128-255 Byte Packets Received: 47544949
+	Number of 256-511 Byte Packets Received: 295983785
+	Number of 512-1023 Byte Packets Received: 1834294550
+	Number of 1024-1518 Byte Packets Received: 135808272621
+	Number of 1519-9699 Byte Packets Received: 326291
+	Number of Packets of Size Larger Than 9699 Bytes Received: 0
+DCBX Status: Enabled
+	TLV Exchange Complete
+	TC State   [0x00000009] Enabled
+	PFC State  [0x80000000] Error
+	QCN State  [0x00000000] Disabled
+	APPL State [0x00000009] Enabled
+	Priority Flow Control: Disabled
+	Traffic Class	Bandwidth	Priority
+	-------------	---------	--------
+	   0		   100%		0 1 2 3 4 5 6 7 
+	   1		   0%		
+	   2		   0%		
+	   3		   0%		
+	   4		   0%		
+	   5		   0%		
+	   6		   0%		
+	   7		   0%		
+	Application	Priority
+	-----------	--------
+	   0x8906	3 
+VF Minimum Bandwidth: 100%
+VF Maximum Bandwidth: 100%
+PF Maximum TX Frame Size: 9024
+PF Maximum RX Frame Size: 9022
+Controller Version: 00000B00

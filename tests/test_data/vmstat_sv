@@ -1,0 +1,48 @@
+           3352336647 total address trans. faults
+               139878 page ins
+             17594103 page outs
+                    0 paging space page ins
+                    0 paging space page outs
+                    0 total reclaims
+           1131950778 zero filled pages faults
+                 7046 executable filled pages faults
+                    0 pages examined by clock
+                    0 revolutions of the clock hand
+                    0 pages freed by the clock
+             33281569 backtracks
+                    0 free frame waits
+                    0 extend XPT waits
+                30009 pending I/O waits
+             17733981 start I/Os
+              4210944 iodones
+          10142679014 cpu context switches
+           2319873329 device interrupts
+           3118662390 software interrupts
+           3320348089 decrementer interrupts
+                 1103 mpc-sent interrupts
+                 1111 mpc-receive interrupts
+                  624 phantom interrupts
+                    0 traps
+           6656428359 syscalls
+              4194304 memory pages
+              3984032 lruable pages
+              2510739 free pages
+                    1 memory pools
+              1502261 pinned pages
+                 90.0 maxpin percentage
+                  3.0 minperm percentage
+                 90.0 maxperm percentage
+                  3.1 numperm percentage
+               125079 file pages
+                  0.0 compressed percentage
+                    0 compressed pages
+                  3.1 numclient percentage
+                 90.0 maxclient percentage
+               125079 client pages
+                    0 remote pageouts scheduled
+                    0 pending disk I/Os blocked with no pbuf
+                    0 paging space I/Os blocked with no psbuf
+                 1972 filesystem I/Os blocked with no fsbuf
+                  385 client filesystem I/Os blocked with no fsbuf
+                    0 external pager filesystem I/Os blocked with no fsbuf
+                 37.2 percentage of memory used for computational pages

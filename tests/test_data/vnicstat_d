@@ -1,0 +1,115 @@
+
+--------------------------------------------------------------------------------
+VNIC Server Statistics: vnicserver1
+--------------------------------------------------------------------------------
+Device Statistics:
+------------------                      
+State: active
+Backing Device Name: ent34
+
+Failover State: active
+Failover Readiness: operational
+Failover Priority: 50
+
+Client Partition ID: 32
+Client Partition Name: ppa1tsm00010
+Client Operating System: AIX
+Client Device Name: ent1
+Client Device Location Code: U9080.M9S.8205C8T-V32-C2
+
+Main CRQ Statistics:
+--------------------                    
+State: open                             Error Indications: 191
+Commands Received: 5944454
+Commands Sent: 5944653                  Adapter Problem: 0
+Interrupts: 5944461                     Firmware Problem: 0
+Command Response Errors: 191            Device Driver Problem: 191
+Link State Indications: 4               EEH Recovery: 0
+ACL Change Indications: 0               Firmware Updated: 0
+Login Requests: 4                       Low Memory: 0
+Reboots: 3
+
+RX/TX statistics:
+-----------------                       
+TX:                                     RX:
+---                                     ---                                     
+Client Descriptors: 8824135891          Client Descriptors: 139036407211
+VF Descriptors: 8686674162              VF Descriptors: 139036407211
+Max VF Descriptors Queued: 4092
+Client Completions: 135729282           Client Completions: 139036403115
+VF Completions: 135729282               VF Completions: 139036403115
+Client Completions Error: 0             Client Completions Error: 0
+VF Completions Error: 0                 VF Completions Error: 0
+TCE Passed to VF : 8686674162
+TCE Mappings: 0                         TCE Mappings: 0
+TCE Unmappings: 0                       TCE Unmappings: 0
+Descriptors Pool Full: 0                Descriptors Pool Empty: 43001
+
+Per Sub-CRQ Statistics: 
+------------------------                
+TX Sub-CRQ:                             RX Sub-CRQ: 
+------------                            ------------                            
+Nb Sub-CRQ: 4                           Nb Sub-CRQ: 4
+Queue Size: 1023                        Queue Size: 2048
+                                        Buffer Size: 9146
+
+TX Sub-CRQ 1:                           RX Sub-CRQ 1:
+-------------                           -------------                           
+Current queue length: 2                 Current queue length: 1024
+Client Descriptors: 2279569749          Client Descriptors: 289774030
+VF Descriptors: 2256133250              VF Descriptors: 289774030
+Max VF Descriptors Queued: 1023
+Client Completions: 35252082            Client Completions: 289773006
+VF Completions: 35252082                VF Completions: 289773006
+Client Completions Error: 0             Client Completions Error: 0
+VF Completions Error: 0                 VF Completions Error: 0
+TCE Passed to VF : 2256133250
+TCE Mappings: 0                         TCE Mappings: 0
+TCE Unmappings: 0                       TCE Unmappings: 0
+Descriptors Pool Full: 0                Descriptors Pool Empty: 0
+
+TX Sub-CRQ 2:                           RX Sub-CRQ 2:
+-------------                           -------------                           
+Current queue length: 41                Current queue length: 1024
+Client Descriptors: 2514986132          Client Descriptors: 64911548311
+VF Descriptors: 2437188009              VF Descriptors: 64911548311
+Max VF Descriptors Queued: 1023
+Client Completions: 38081062            Client Completions: 64911547287
+VF Completions: 38081062                VF Completions: 64911547287
+Client Completions Error: 0             Client Completions Error: 0
+VF Completions Error: 0                 VF Completions Error: 0
+TCE Passed to VF : 2437188009
+TCE Mappings: 0                         TCE Mappings: 0
+TCE Unmappings: 0                       TCE Unmappings: 0
+Descriptors Pool Full: 0                Descriptors Pool Empty: 42381
+
+TX Sub-CRQ 3:                           RX Sub-CRQ 3:
+-------------                           -------------                           
+Current queue length: 43                Current queue length: 1024
+Client Descriptors: 2090385606          Client Descriptors: 34858603713
+VF Descriptors: 2071266795              VF Descriptors: 34858603713
+Max VF Descriptors Queued: 1023
+Client Completions: 32363543            Client Completions: 34858602689
+VF Completions: 32363543                VF Completions: 34858602689
+Client Completions Error: 0             Client Completions Error: 0
+VF Completions Error: 0                 VF Completions Error: 0
+TCE Passed to VF : 2071266795
+TCE Mappings: 0                         TCE Mappings: 0
+TCE Unmappings: 0                       TCE Unmappings: 0
+Descriptors Pool Full: 0                Descriptors Pool Empty: 236
+
+TX Sub-CRQ 4:                           RX Sub-CRQ 4:
+-------------                           -------------                           
+Current queue length: 28                Current queue length: 1024
+Client Descriptors: 1939194404          Client Descriptors: 38976481157
+VF Descriptors: 1922086108              VF Descriptors: 38976481157
+Max VF Descriptors Queued: 1023
+Client Completions: 30032595            Client Completions: 38976480133
+VF Completions: 30032595                VF Completions: 38976480133
+Client Completions Error: 0             Client Completions Error: 0
+VF Completions Error: 0                 VF Completions Error: 0
+TCE Passed to VF : 1922086108
+TCE Mappings: 0                         TCE Mappings: 0
+TCE Unmappings: 0                       TCE Unmappings: 0
+Descriptors Pool Full: 0                Descriptors Pool Empty: 384
+
