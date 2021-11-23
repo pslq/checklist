@@ -16,7 +16,8 @@ class collector(Base_collector) :
         }
 
     self.file_sources = {
-        'vnicstat'  : self.providers['ioscli'].parse_vnicstat_d
+        'vnicstat'  : self.providers['ioscli'].parse_vnicstat_d,
+        'seastat'  : self.providers['ioscli'].parse_seastat_d
         }
     return(None)
 
@@ -33,6 +34,7 @@ class collector(Base_collector) :
     if update_from_system :
       self.update_from_system()
 
+    # Handle vnicstat
     for adpt,adpt_stat in self.providers['ioscli'].data['vnicstat'] :
       for st in [ 'state', 'failover_state' ] :
         if adpt_stat[st] != 'active' :
@@ -44,5 +46,6 @@ class collector(Base_collector) :
             if cnt in md_data :
               if md_data[cnt] > 0 :
                 messages += [ "The device %s under crq %s : %s incremented counter %s"%(adpt,crq,md,cnt) ]
+
 
     return(messages)

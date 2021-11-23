@@ -1,0 +1,59 @@
+
+================================================================================
+
+Advanced Statistics for SEA
+Device Name: ent63 
+
+================================================================================
+MAC: 5A:0E:E6:D2:E2:C2
+----------------------
+
+VLAN: 706
+VLAN Priority: 0
+Hostname: frodo-g.dominio.com
+IP: 10.29.12.13
+
+Transmit Statistics:                   Receive Statistics:
+--------------------                   -------------------
+Packets: 19                            Packets: 20                            
+Bytes: 2845                            Bytes: 2869                            
+
+================================================================================
+MAC: 5A:0E:E6:D2:E2:C2
+----------------------
+
+VLAN: 706
+VLAN Priority: 0
+
+Transmit Statistics:                   Receive Statistics:
+--------------------                   -------------------
+Packets: 1                             Packets: 3                             
+Bytes: 60                              Bytes: 230                             
+
+================================================================================
+MAC: B6:19:22:CC:7F:0C
+----------------------
+
+VLAN: 706
+VLAN Priority: 0
+Hostname: cuiaba-sapo.dominio.com
+IP: 10.29.12.7
+
+Transmit Statistics:                   Receive Statistics:
+--------------------                   -------------------
+Packets: 163414                        Packets: 110216                        
+Bytes: 116043950                       Bytes: 39653282                        
+
+================================================================================
+MAC: B6:19:22:CC:7F:0C
+----------------------
+
+VLAN: 706
+VLAN Priority: 0
+
+Transmit Statistics:                   Receive Statistics:
+--------------------                   -------------------
+Packets: 1                             Packets: 142                           
+Bytes: 46                              Bytes: 15930                           
+
+================================================================================

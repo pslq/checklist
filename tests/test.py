@@ -13,7 +13,95 @@ from pq_checklist.entstat import parser as entstat_parser
 from pq_checklist.ioscli import parser as ioscli_parser
 
 
+
 class TestClass:
+  def test_parse_seastat_d(self):
+    parser = ioscli_parser()
+    expected_ret = {'ent63': {'vlan': {706: {'tx': {'pkg': 163435, 'bytes': 116046901},
+                                             'rx': {'pkg': 110381, 'bytes': 39672311}}},
+                              'mac': {'5a:0e:e6:d2:e2:c2': {'tx': {'pkg': 20, 'bytes': 2905},
+                                                            'rx': {'pkg': 23, 'bytes': 3099},
+                                                            'ipaddr': '10.29.12.13',
+                                                            'hostname': 'frodo-g.dominio.com',
+                                                            'vlan': 706, 'vlan_prio': 0},
+                                      'b6:19:22:cc:7f:0c': {'tx': {'pkg': 163415, 'bytes': 116043996},
+                                                            'rx': {'pkg': 110358, 'bytes': 39669212},
+                                                            'ipaddr': '10.29.12.7',
+                                                            'hostname': 'cuiaba-sapo.dominio.com',
+                                                            'vlan': 706, 'vlan_prio': 0}}}}
+    assert parser.load_from_file('tests/test_data/seastat_d_ent63', parse_function=parser.parse_seastat_d) == expected_ret
+
+
+  def test_parse_vnicstat_d(self) :
+    parser = ioscli_parser()
+    expected_ret = {'vnicserver1': {'crq':
+                                     {'main': {'tx': {'state': 'open', 'commands_received': 5944454,
+                                                      'commands_sent': 5944653, 'interrupts': 5944461,
+                                                      'command_response_errors': 191, 'link_state_indications': 4,
+                                                      'acl_change_indications': 0, 'login_requests': 4, 'reboots': 3,
+                                                      'client_descriptors': 8824135891, 'vf_descriptors': 8686674162,
+                                                      'max_vf_descriptors_queued': 4092, 'client_completions': 135729282,
+                                                      'vf_completions': 135729282, 'client_completions_error': 0, 'vf_completions_error': 0,
+                                                      'tce_passed_to_vf': 8686674162, 'tce_mappings': 0,
+                                                      'tce_unmappings': 0, 'descriptors_pool_full': 0, 'nb_sub-crq': 4, 'queue_size': 1023},
+                                               'rx': {'error_indications': 191, 'adapter_problem': 0, 'firmware_problem': 0,
+                                                      'device_driver_problem': 191, 'eeh_recovery': 0, 'firmware_updated': 0,
+                                                      'low_memory': 0, 'client_descriptors': 139036407211,
+                                                      'vf_descriptors': 139036407211, 'client_completions': 139036403115,
+                                                      'vf_completions': 139036403115, 'client_completions_error': 0,
+                                                      'vf_completions_error': 0, 'tce_mappings': 0, 'tce_unmappings': 0,
+                                                      'descriptors_pool_empty': 43001, 'nb_sub-crq': 4, 'queue_size': 2048,
+                                                      'buffer_size': 9146}
+                                               },
+                                      '1': {'tx': {'current_queue_length': 2, 'client_descriptors': 2279569749,
+                                                   'vf_descriptors': 2256133250, 'max_vf_descriptors_queued': 1023,
+                                                   'client_completions': 35252082, 'vf_completions': 35252082,
+                                                   'client_completions_error': 0, 'vf_completions_error': 0,
+                                                   'tce_passed_to_vf': 2256133250, 'tce_mappings': 0, 'tce_unmappings': 0,
+                                                   'descriptors_pool_full': 0},
+                                            'rx': {'current_queue_length': 1024, 'client_descriptors': 289774030,
+                                                   'vf_descriptors': 289774030, 'client_completions': 289773006,
+                                                   'vf_completions': 289773006, 'client_completions_error': 0,
+                                                   'vf_completions_error': 0, 'tce_mappings': 0, 'tce_unmappings': 0,
+                                                   'descriptors_pool_empty': 0}},
+                                      '2': {'tx': {'current_queue_length': 41, 'client_descriptors': 2514986132,
+                                                   'vf_descriptors': 2437188009, 'max_vf_descriptors_queued': 1023,
+                                                   'client_completions': 38081062, 'vf_completions': 38081062,
+                                                   'client_completions_error': 0, 'vf_completions_error': 0,
+                                                   'tce_passed_to_vf': 2437188009, 'tce_mappings': 0, 'tce_unmappings': 0,
+                                                   'descriptors_pool_full': 0},
+                                            'rx': {'current_queue_length': 1024, 'client_descriptors': 64911548311,
+                                                   'vf_descriptors': 64911548311, 'client_completions': 64911547287,
+                                                   'vf_completions': 64911547287, 'client_completions_error': 0,
+                                                   'vf_completions_error': 0, 'tce_mappings': 0, 'tce_unmappings': 0,
+                                                   'descriptors_pool_empty': 42381}},
+                                      '3': {'tx': {'current_queue_length': 43, 'client_descriptors': 2090385606,
+                                                   'vf_descriptors': 2071266795, 'max_vf_descriptors_queued': 1023,
+                                                   'client_completions': 32363543, 'vf_completions': 32363543,
+                                                   'client_completions_error': 0, 'vf_completions_error': 0,
+                                                   'tce_passed_to_vf': 2071266795, 'tce_mappings': 0, 'tce_unmappings': 0,
+                                                   'descriptors_pool_full': 0},
+                                            'rx': {'current_queue_length': 1024, 'client_descriptors': 34858603713,
+                                                   'vf_descriptors': 34858603713, 'client_completions': 34858602689,
+                                                   'vf_completions': 34858602689, 'client_completions_error': 0,
+                                                   'vf_completions_error': 0, 'tce_mappings': 0, 'tce_unmappings': 0,
+                                                   'descriptors_pool_empty': 236}},
+                                      '4': {'tx': {'current_queue_length': 28, 'client_descriptors': 1939194404,
+                                                   'vf_descriptors': 1922086108, 'max_vf_descriptors_queued': 1023,
+                                                   'client_completions': 30032595, 'vf_completions': 30032595,
+                                                   'client_completions_error': 0, 'vf_completions_error': 0,
+                                                   'tce_passed_to_vf': 1922086108, 'tce_mappings': 0,
+                                                   'tce_unmappings': 0, 'descriptors_pool_full': 0},
+                                            'rx': {'current_queue_length': 1024, 'client_descriptors': 38976481157,
+                                                   'vf_descriptors': 38976481157, 'client_completions': 38976480133,
+                                                   'vf_completions': 38976480133, 'client_completions_error': 0,
+                                                   'vf_completions_error': 0, 'tce_mappings': 0, 'tce_unmappings': 0,
+                                                   'descriptors_pool_empty': 384}}
+                                    }, 'state': 'active', 'backing_device_name': 'ent34', 'failover_state': 'active',
+                                       'failover_readiness': 'operational', 'failover_priority': 50, 'client_partition_id': 32,
+                                       'client_partition_name': 'ppa1tsm00010', 'client_operating_system': 'aix',
+                                       'client_device_name': 'ent1', 'client_device_location_code': 'u9080.m9s.8205c8t-v32-c2'}}
+    assert parser.load_from_file('tests/test_data/vnicstat_d', parse_function=parser.parse_vnicstat_d) == expected_ret
 
   def test_entstat_veth(self) :
     parser = entstat_parser()
