@@ -1,4 +1,4 @@
-from .. import debug_post_msg
+from .. import debug_post_msg, load_file
 from ..cache import pq_cache
 import importlib, datetime, os.path, time, os, json
 from ast import literal_eval
@@ -290,32 +290,18 @@ class OracleConnection() :
     '''
     Load and parse sqlfiles
     '''
-    # Replace strings if any replacement defined
-    query = ''
     tgt = None
-
-    # Load query file
     if query_file in self.queries :
       tgt = os.path.join(self.query_dir,query_file)
     elif notdefined :
       tgt = query_file
-
-    if tgt :
-      try :
-        with open(tgt, 'r') as fptr :
-          query = fptr.read()
-      except Exception as e :
-        debug_post_msg(self.logger,'Error loading sqlfile : %s'%str(e), raise_type=Exception)
 
     # Replace strings if any replacement defined
     replacements = specific_replacements
     if query_file in self.query_replacements.keys() :
       replacements += self.query_replacements[query_file]
 
-    for r in replacements :
-      query = query.replace(r[0],r[1])
-
-    return(query)
+    return(load_file(self.logger,tgt,replacements))
 
 #######################################################################################################################
   def database_name(self,con_seq:int) :

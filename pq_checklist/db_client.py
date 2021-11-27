@@ -1,5 +1,6 @@
 from . import debug_post_msg, get_config
-import json, importlib
+import json, importlib, os.path
+from . import load_file as load_query_file
 import datetime
 #######################################################################################################################
 
@@ -35,7 +36,9 @@ class db_client() :
     self.config = config
     self.logger = logger
     self.auto_connect = auto_connect
-    self.db, self.db_write_api, self.output_file = None, None, None
+    self.db, self.db_write_api, self.query_api, self.output_file = None, None, None, None
+    self.query_dir      = os.path.join(os.path.dirname(os.path.abspath(__file__)),"flux")
+
 
     if auto_connect :
       self.connect()
@@ -74,10 +77,10 @@ class db_client() :
       from influxdb_client import InfluxDBClient, Point, WritePrecision
       try :
         self.db = InfluxDBClient(**dict(self.config.items('INFLUXDB')))
-        self.db_write_api = self.db.write_api()
+
       except Exception as e :
         debug_post_msg(self.logger,'Error connecting to influxDB: %s'%e)
-    if ( self.logger.getEffectiveLevel() <= 10 or not self.db_write_api ) and len(self.config['INFLUXDB']['dump_file']) :
+    if self.logger.getEffectiveLevel() <= 10  and len(self.config['INFLUXDB']['dump_file']) :
       try :
         self.output_file = open(self.config['INFLUXDB']['dump_file'], 'a+')
       except Exception as e :
@@ -85,6 +88,7 @@ class db_client() :
       debug_post_msg(self.logger,'InfluxDB not configured or influxdb_client not installed, or loglevel set to debug. Queries will be saved at dumpfile')
     return(None)
 
+#######################################################################################################################
   def delete_measurement(self, measurement,start_date:str='1970-01-01T00:00:00Z', date_end:str='') :
     ret = None
     if self.db :
@@ -116,6 +120,25 @@ class db_client() :
     return(ret)
 
 #######################################################################################################################
+  def query(self,measurement,start_date:str='1970-01-01T00:00:00Z', date_end:str='', yield_function:str="nonnegative derivative") :
+    ret = []
+    if self.db :
+      self.db_query_api = self.db.query_api()
+
+      tgt = os.path.join(self.query_dir,'base_query.flux')
+      rep = [ [ '<BUCKET>', self.config['INFLUXDB']['bucket'] ],
+              [ '<MEASUREMENT>', measurement ],
+              [ '<START_RANGE>', start_date ],
+              [ '<STOP_RANGE>', date_end ],
+              [ '<YIELD_FUNCTION>', yield_function ]]
+      query = load_query_file(self.logger, tgt, rep)
+
+      for table in self.db_query_api.query(org=self.config['INFLUXDB']['org'], query=load_query_file(self.logger, tgt, rep)) :
+        for record in table.records:
+          ret.append((record.get_field(), record.get_value()))
+    return(ret)
+
+#######################################################################################################################
   def write(self,msg:list, dumpfile_only = False, db_only = False) -> bool :
     '''
     Write data into influxdb or dumpfile in order to perform further analysis
@@ -130,11 +153,13 @@ class db_client() :
     '''
     ret = False
     try :
+      self.db_write_api = self.db.write_api()
       if self.db_write_api and not dumpfile_only :
         try :
           ret_data = self.db_write_api.write(self.config['INFLUXDB']['bucket'],  self.config['INFLUXDB']['org'], msg)
           if ret_data :
             debug_post_msg(self.logger, 'Unexpected from InfluxDB, something weird might be happening: %s'%str(ret_data))
+          self.db_write_api.close()
           ret = True
         except Exception as e :
           debug_post_msg(self.logger, 'Error writing data to influxdb: %s'%e, raise_type=Exception)

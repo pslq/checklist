@@ -36,6 +36,29 @@ def pq_round_number(number,ndigits=2,tp=float) :
   return(tp(round(number,ndigits=ndigits)))
 
 #######################################################################################################################
+def load_file(logger, file:str, specific_replacements:list=[]) -> str:
+  '''
+  Load and parse files
+  '''
+  # Replace strings if any replacement defined
+  ret_str = ''
+
+  if file:
+    try :
+      with open(file, 'r') as fptr :
+        ret_str = fptr.read()
+    except Exception as e :
+      debug_post_msg(logger,'Error loading sqlfile : %s'%str(e), raise_type=Exception)
+
+  for r in specific_replacements :
+    try :
+      ret_str = ret_str.replace(r[0],r[1])
+    except :
+      pass
+
+  return(ret_str)
+
+#######################################################################################################################
 def debug_post_msg(logger, msg:str, screen_only:bool=False, no_screen:bool = False, end:str='\n', \
                            flush:bool=False, raise_type=None) -> None:
   '''

@@ -10,7 +10,7 @@ def cleanup(st,swap=False) :
   return(try_conv_complex(ret))
 
 
-def parse_seastat_d(global_dict:dict, data:list, debug:bool=False) -> dict :
+def parse_seastat_d(data:list, debug:bool=False) -> dict :
   ret = {}
   cur_dev = ''
   hwaddr = ''
@@ -59,6 +59,4 @@ def parse_seastat_d(global_dict:dict, data:list, debug:bool=False) -> dict :
         ret[cur_dev]['vlan'][tgt_vlan][mode]['pkg'] += mac_data[mode]['pkg']
         ret[cur_dev]['vlan'][tgt_vlan][mode]['bytes'] += mac_data[mode]['bytes']
 
-  if global_dict :
-    global_dict.update(ret)
   return(ret)

@@ -9,7 +9,7 @@ def cleanup(st,swap=False) :
     ret = ret.replace(sws[0],sws[1])
   return(try_conv_complex(ret))
 
-def parse_vnicstat_d(global_dict, data:list) :
+def parse_vnicstat_d(data:list) :
   ret = { }
   cur_dev = ''
   crq_session = ''
@@ -57,7 +57,5 @@ def parse_vnicstat_d(global_dict, data:list) :
           ret[cur_dev]['crq'][crq_session]['rx'][key1] = val1
     else :
       nothing_done = False
-  if global_dict :
-    global_dict.update(ret)
   return(ret)
 

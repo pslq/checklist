@@ -9,12 +9,10 @@ from ._parse_vnicstat_d import parse_vnicstat_d
 from ._parse_seastat_d import parse_seastat_d
 
 class parser(StatsParser) :
-  def __init__(self, logger = None, cwd = '/tmp', bos_data = None):
+  def __init__(self, logger = None, cwd = '/tmp', bos_data = None, samples = 2, interval = 1):
     '''
     '''
     super().__init__(logger = logger, cwd = cwd, bos_data = bos_data)
-    self.commands = { }
-    self.functions = { }
 
     self.data = { 'vnicstat' : {}, 'seastat' : {} }
 
@@ -85,7 +83,7 @@ class parser(StatsParser) :
         if mac_data['ipaddr'] :
           l_tags['ipaddr'] = mac_data['ipaddr']
 
-        ret.append({'measurement' : 'seastat_vlan', 'tags' : l_tags,
+        ret.append({'measurement' : 'seastat_mac', 'tags' : l_tags,
           'fields' : { 'tx_pkg' : mac_data['tx']['pkg'], 'tx_bytes' : mac_data['tx']['bytes'],
                        'rx_pkg' : mac_data['rx']['pkg'], 'rx_bytes' : mac_data['rx']['bytes'] },
           'time' : l_time })
@@ -94,8 +92,12 @@ class parser(StatsParser) :
     return(ret)
 #######################################################################################################################
   def parse_seastat_d(self, data:list) :
-    return(parse_seastat_d(self.data['seastat'],data))
+    ret = parse_seastat_d(data)
+    self.data['seastat'].update(ret)
+    return(self.data['seastat'])
 #######################################################################################################################
   def parse_vnicstat_d(self, data:list) :
-    return(parse_vnicstat_d(self.data['vnicstat'],data))
+    ret = parse_vnicstat_d(data)
+    self.data['vnicstat'].update(ret)
+    return(self.data['vnicstat'])
 #######################################################################################################################
