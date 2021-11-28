@@ -72,6 +72,18 @@
       poll: 02
       when: bos_mp.stat.exists == True
 
+    - name: seastat
+      seastat:
+      register: seastat
+      pool: 02
+      when: ioscli_result.exists == True
+
+    - name: vnicstat
+      vnicstat:
+      register: vnicstat
+      pool: 02
+      when: ioscli_result.exists == True
+
     - name: fcstat
       fcstat:
       register: fcstat
