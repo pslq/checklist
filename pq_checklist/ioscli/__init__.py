@@ -69,7 +69,7 @@ class parser(StatsParser) :
           ret.append({'measurement' : 'vnicstat', 'tags' : l_tags, 'fields' : md_data, 'time' : l_time })
 
     # Handle seastat
-    for adpt,adpt_stat in self.data['seastat'] :
+    for adpt,adpt_stat in self.data['seastat'].items() :
       for vlan,vlan_data in adpt_stat['vlan'].items() :
         ret.append({'measurement' : 'seastat_vlan',
           'tags' : { 'host' : self.bos_data['bos']['hostname'], 'adapter' : adpt, 'vlan' : vlan },
