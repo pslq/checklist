@@ -29,7 +29,9 @@ class parser(StatsParser) :
             self.commands['aix'][key] = "fcstat -e %s"%dev
             self.functions['aix'][key] = self.parse_fcstat_stats
     except Exception as e :
-      debug_post_msg(self.logger, 'Error loading device specific commands, possibly bos_data not initialized : %s'%e, raise_type=Exception)
+      debug_post_msg(self.logger,
+                     'Error loading device specific commands, possibly bos_data not initialized : %s'%e,
+                     raise_type=Exception)
 
 
     return(None)
@@ -121,5 +123,4 @@ class parser(StatsParser) :
     return(ret)
 
 
-#######################################################################################################################
 #######################################################################################################################
