@@ -21,7 +21,8 @@ mode = local
 # Possible values: True or False
 healthcheck = True
 # Checks to perform
-collectors = [ 'net', 'cpu', 'oracle', 'vio' ]
+# collectors = [ 'net', 'cpu', 'oracle', 'vio', 'dio' ]
+collectors = [ 'net', 'cpu', 'vio', 'dio' ]
 
 [LOOP]
 # Interval between the collections
