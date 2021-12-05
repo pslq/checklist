@@ -46,7 +46,7 @@ def main():
         result['stdout_lines'][adpt] = stdout
     if len(result['stdout_lines']) == 0 :
       result['msg'] = 'No adapter with stats found'
-      result['rc'] = -1
+      result['rc'] = 0
   else :
     result['rc'] = -1
 
