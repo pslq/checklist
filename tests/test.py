@@ -11,6 +11,7 @@ from pq_checklist.netstat import parser as netstat_parser
 from pq_checklist.bos_info import bos as bos_parser
 from pq_checklist.entstat import parser as entstat_parser
 from pq_checklist.ioscli import parser as ioscli_parser
+from pq_checklist.bos_info import bos as bos_data
 
 
 
@@ -281,7 +282,9 @@ class TestClass:
     assert coll_lparstat.load_from_file('tests/test_data/lparstat_i', parse_function=coll_lparstat.parse_lparstat_i) == expected_ret
 
   def test_mpstat_stats(self):
-    coll_mpstat = mpstat_parser()
+
+    coll_mpstat = mpstat_parser(bos_data = bos_data())
+    coll_mpstat.bos_data.data = { 'bos' : { 'os' : 'aix' }}
     expected_ret = {'cpu'  : ['ALL', 'ALL'], 'min':    [9655, 3358], 'maj':   [0, 0],     'mpcs':  [0, 0],
                     'mpcr' : [0, 0],         'dev':    [42, 84],     'soft':  [112, 112], 'dec':   [2886, 2868],
                     'ph'   : [0, 0],         'cs':     [3364, 3370], 'ics':   [18, 16],   'bound': [2, 1],
