@@ -121,13 +121,15 @@ class collector(Base_collector) :
       self.update_all_ansible_playbook(debug=debug)
 
     # Get all information from hosts defined into the collectors
+    # Write information metrics to influxdb
     for hosts in self.collectors.keys() :
       for measurement_povider in self.collectors[hosts].values() :
         data += measurement_povider.get_latest_measurements(debug = debug, update_from_system=update_data_on_measurement)
         # Get Health Check routines and send to syslog
         if self.healthcheck and get_hc :
-          for msg in measurement_povider.health_check(update_from_system=update_data_on_measurement) :
-            debug_post_msg(self.logger,'MGS FROM %s : %s'%(hosts,msg))
+          with db_client(self.config,self.logger) as db :
+            for msg in measurement_povider.health_check(update_from_system=update_data_on_measurement, db=db) :
+              debug_post_msg(self.logger,'MGS FROM %s : %s'%(hosts,msg))
 
     # Write information metrics to influxdb
     with db_client(self.config,self.logger) as db :

@@ -2,6 +2,7 @@ from . import debug_post_msg
 from .entstat import parser as entstat_parser
 from .netstat import parser as netstat_parser
 from .Base_collector import Base_collector
+import datetime
 
 class collector(Base_collector) :
   def __init__(self, config = None, logger = None, bos_data = None ) :
@@ -25,7 +26,7 @@ class collector(Base_collector) :
     return(None)
 
 #######################################################################################################################
-  def health_check(self,update_from_system:bool = True) -> list :
+  def health_check(self,update_from_system:bool = True, db=None) -> list :
     '''
     Send health messages into server's syslog for diag purposes
 
@@ -38,6 +39,7 @@ class collector(Base_collector) :
 
     messages = []
     entstat = self.providers['entstat']
+    values_from_db = {}
 
     entstat_check_groups = { 'transmit_stats' : ( 'transmit_errors', 'receive_errors', 'transmit_packets_dropped',
                                                   'receive_packets_dropped', 'bad_packets', 's_w_transmit_queue_overflow',
@@ -60,14 +62,36 @@ class collector(Base_collector) :
                              'veth_stats'    : ('send_errors', 'invalid_vlan_id_packets', 'receiver_failures', 'platform_large_send_packets_dropped')
                              }
 
-    # check entstat data
+    # Load previous counters from database
+    if db :
+      now = datetime.datetime.utcnow()
+      start_analysis = now - datetime.timedelta(days=1)
+      extra_filters = [ '|> filter(fn: (r) => r["host"] == "%s")'%(self.bos_data.data['bos']['hostname']) ]
+      for i in db.query("entstat", start_analysis.timestamp(), now.timestamp(), extra_filters=extra_filters) :
+        if i['_field'] in entstat_check_groups[i['stats_type']] :
+          try :
+            values_from_db[i['interface']][i['stats_type']][i['_field']].append(i['_value'])
+          except :
+            try :
+              values_from_db[i['interface']][i['stats_type']][i['_field']] = [ i['_value'] ]
+            except :
+              try :
+                values_from_db[i['interface']][i['stats_type']] = { i['_field'] : [ i['_value'] ] }
+              except :
+                values_from_db[i['interface']] = { i['stats_type'] : { i['_field'] : [ i['_value'] ] } }
+
+    # Validate counters
     for dev in entstat['stats'].keys() :
       for check_group, checks in entstat_check_groups.items() :
         try :
           for stat in checks :
             try :
               if entstat['stats'][dev]['transmit_stats'][stat] > 0 :
-                messages.append('The %s counter at %s is at %d on interface $s'%(stat,check_group, entstat['stats'][dev]['transmit_stats'][stat],dev))
+                try :
+                  if values_from_db[dev][check_group][stat] != entstat['stats'][dev]['transmit_stats'][stat][-1] :
+                    messages.append('The %s counter at %s is at %d on interface $s'%(stat,check_group, entstat['stats'][dev]['transmit_stats'][stat],dev))
+                except :
+                  messages.append('The %s counter at %s is at %d on interface $s and no check to the database were possible'%(stat,check_group, entstat['stats'][dev]['transmit_stats'][stat],dev))
             except :
               pass
         except :
@@ -77,6 +101,5 @@ class collector(Base_collector) :
         if not ( entstat['stats'][dev]['lacp_port_stats']['partner_state']['synchronization']  == \
                  entstat['stats'][dev]['lacp_port_stats']['actor_state']['synchronization'] == 'IN_SYNC' ) :
           messages.append('LACP Error at interface %s'%dev)
-
 
     return(messages)

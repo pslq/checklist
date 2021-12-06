@@ -121,13 +121,8 @@ class db_client() :
     return(ret)
 
 #######################################################################################################################
-  def query_as_list(self,measurement,start_date:int=0, end_date:int=0, yield_function:str="nonnegative derivative") :
-    return(list(self.query(measurement,start_date=start_date,end_date=end_date, yield_function= yield_function)))
-
-#######################################################################################################################
   def query(self,measurement,start_date:int=0, end_date:int=0, yield_function:str="nonnegative derivative", \
-            extra_filters:list=[]) :
-    '<EXTRA_FILTERS>'
+            extra_filters:list=[]) -> dict:
     if self.db :
       self.db_query_api = self.db.query_api()
 
@@ -145,10 +140,12 @@ class db_client() :
 
       query = load_query_file(self.logger, tgt, rep)
 
-      for table in self.db_query_api.query(org=self.config['INFLUXDB']['org'],
-                                           query=load_query_file(self.logger, tgt, rep)) :
-        for record in table.records:
-          yield ((record.get_field(), record.get_value()))
+      try :
+        for fr in self.db_query_api.query_stream(org=self.config['INFLUXDB']['org'],
+                                             query=load_query_file(self.logger, tgt, rep)) :
+          yield(fr.values)
+      except Exception as e :
+        debug_post_msg(self.logger, 'Error %s : running query : %s'%(e,query), raise_type=Exception)
 
 #######################################################################################################################
   def write(self,msg:list, dumpfile_only = False, db_only = False) -> bool :

@@ -75,21 +75,20 @@
     - name: seastat
       seastat:
       register: seastat
-      pool: 02
-      when: ioscli_result.exists == True
-
+      poll: 02
+      when: ioscli_result.stat.exists == True
+    
     - name: vnicstat
       vnicstat:
       register: vnicstat
-      pool: 02
-      when: ioscli_result.exists == True
-
+      when: ioscli_result.stat.exists == True
+    
     - name: fcstat
       fcstat:
       register: fcstat
       poll: 02
       when: bos_mp.stat.exists == True
-
+  
     - name: uname_a
       command: uname -a
       poll: 02 
