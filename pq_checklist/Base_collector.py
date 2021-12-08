@@ -121,7 +121,10 @@ class Base_collector :
       try :
         ret += provider.get_measurements(update_from_system = update_from_system)
       except :
-        ret += [ provider.get_measurements(update_from_system = update_from_system) ]
+        try :
+          ret += [ provider.get_measurements(update_from_system = update_from_system) ]
+        except Exception as e :
+          debug_post_msg(self.logger,'Error during collection of %s : %s'%(provider,e))
 
     if debug :
       duration = time() - st
