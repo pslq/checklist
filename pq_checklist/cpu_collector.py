@@ -35,7 +35,7 @@ class collector(Base_collector) :
 #######################################################################################################################
 
 #######################################################################################################################
-  def health_check(self, update_from_system:bool = True) -> list:
+  def health_check(self, update_from_system:bool = True, db=None) -> list:
     '''
     Send health messages into server's syslog for diag purposes
 

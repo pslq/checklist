@@ -59,7 +59,7 @@ class parser(StatsParser) :
       self.update_from_system()
 
     for adpt,adpt_stat in self.data['vnicstat'].items() :
-      base = {  'host' : self.bos_data['bos']['hostname'] }
+      base = {  'host' : self.bos_data['bos']['hostname'], 'adapter' : adpt }
       base.update({ st : adpt_stat[st] for st in [ 'backing_device_name', 'client_partition_id',
                                                    'client_partition_name', 'client_operating_system',
                                                    'client_device_name', 'client_device_location_code' ]})
