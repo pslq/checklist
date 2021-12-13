@@ -2,6 +2,7 @@ from . import debug_post_msg
 from .iostat import parser as iostat_parser
 from .fcstat import parser as fcstat_parser
 from .Base_collector import Base_collector
+import collections
 
 class collector(Base_collector) :
   def __init__(self, config = None, logger = None, bos_data = None ) :
@@ -31,6 +32,8 @@ class collector(Base_collector) :
       update_from_system : bool = Get latest data from the local system before give any measurement
     '''
     messages = []
+    values_from_db = collections.defaultdict(dict)
+
     # update stored stats
     if update_from_system :
       self.update_from_system()
