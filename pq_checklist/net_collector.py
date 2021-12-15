@@ -64,7 +64,7 @@ class collector(Base_collector) :
       start_analysis = now - datetime.timedelta(days=days_to_fetch)
       extra_filters = [ '|> filter(fn: (r) => r["host"] == "%s")'%(self.bos_data.data['bos']['hostname']) ]
       for i in db.query("entstat", start_analysis.timestamp(), now.timestamp(), extra_filters=extra_filters) :
-        if i['_field'] in entstat_check_groups[i['stats_type']] :
+        if i['_field'] in self.entstat_check_groups[i['stats_type']] :
           try :
             values_from_db[i['interface']][i['stats_type']][i['_field']][3].append(i['_value'])
           except :
