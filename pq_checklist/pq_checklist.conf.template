@@ -7,7 +7,7 @@ timeout = 50000
 dump_file = /tmp/influx_queries.json
 
 [ANSIBLE]
-host_target = <host target when running on ansible mode>
+host_target = all
 playbook = getperf.yml
 private_data_dir = ansible
 
@@ -26,9 +26,9 @@ collectors = [ 'net', 'cpu', 'vio', 'dio' ]
 
 [LOOP]
 # Interval between the collections
-interval = 60
+interval = 300
 # after how many  collection cycles will run a HC
-hc_loop_count = 10
+hc_loop_count = 2
 
 [LOG]
 # Valid entries: INFO / DEBUG
