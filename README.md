@@ -54,6 +54,20 @@ The Instalation and dependency tracking is being done using Python's setuptools.
 
   <pre>python3 setup.py install</pre>
 
+#### Dependencies
+At this moment the checklist ( regardless it's execution mode ), needs the following modules installed on the server:
+  - ansible-runner
+  - configparser
+  - asyncio
+  - influxdb_client
+  - xdg
+
+  If oracle will be monitored too, the cx_oracle python module is required<br>
+
+  Normally all dependencies should be handled by setuptools during the install<br>
+  for further information please check [setup.cfg](setup.cfg) file
+
+
 #### Packaging and redistribution
 Optionally you can package it into a bdist_whell or even a rpm package in order to facilitate distribution.<br>
 Please check setuptools [documentation](https://packaging.python.org/en/latest/guides/distributing-packages-using-setuptools/#id67) for further details.
@@ -128,11 +142,56 @@ Each collector provide essentially two (02) things :
 > Whatever message comes out from the health check functions just means something that should be checked from MY perspective.<br>
 > Don't engage into tuning crusades or HW capacity endeavors without engage the proper support channels ( like your solution provider )
 
+#### Health check
+  Each collector has it's own HealthCheck ( HC ) set of validations, and at each running cycle the HC messages consolidated through the collectors are pushed to syslog<br>
+  The messages follow the directives defined at the checklist configuration file
+
+
 #### net collector
+This collector is responsible for parse network related commands<br>
+on AIX and VirtualIO Servers, at this moment it will fetch the following commands:
+
+- netstat -s
+- netstat -aon
+- entstat -d ( for each ent interface found on the server )
+
+
+##### Health Check routines
+At this moment this collector report warnings for several counters from [entstat](https://www.ibm.com/docs/en/aix/7.2?topic=e-entstat-command) command when the increment in abnormal ways, like:<br>
+
+- a counter has not changed for the majority of it's life, but started to increase
+- it changes frequently, but began to increase at a faster rate
+
+In case the adapter is [etherchannel](https://www.ibm.com/docs/en/aix/7.2?topic=teaming-configuring-etherchannel) like adapter and is set to use LACP, it will also send messages in case LACP gets out of sync.
+
+###### Counters currently monitored per adapter:
+
+| Session from entstat | Counter |
+| :---: | :--- |
+| transmit_stats |  ( 'transmit_errors', 'receive_errors', 'transmit_packets_dropped', 'receive_packets_dropped', 'bad_packets', 's_w_transmit_queue_overflow', 'no_carrier_sense', 'crc_errors', 'dma_underrun', 'dma_overrun', 'lost_cts_errors', 'alignment_errors', 'max_collision_errors', 'no_resource_errors', 'late_collision_errors', 'receive_collision_errors', 'packet_too_short_errors', 'packet_too_long_errors', 'timeout_errors', 'packets_discarded_by_adapter', 'single_collision_count', 'multiple_collision_count' |
+| 'general_stats' | ( 'no_mbuf_errors' ) |
+| 'dev_stats' | ( 'number_of_xoff_packets_transmitted', 'number_of_xon_packets_transmitted', 'number_of_xoff_packets_received', 'number_of_xon_packets_received', 'transmit_q_no_buffers', 'transmit_q_dropped_packets', 'transmit_swq_dropped_packets', 'receive_q_no_buffers', 'receive_q_errors', 'receive_q_dropped_packets' ) |
+| 'addon_stats' |  ( 'rx_error_bytes', 'rx_crc_errors', 'rx_align_errors', 'rx_discards', 'rx_mf_tag_discard', 'rx_brb_discard', 'rx_pause_frames', 'rx_phy_ip_err_discards', 'rx_csum_offload_errors', 'tx_error_bytes', 'tx_mac_errors', 'tx_carrier_errors', 'tx_single_collisions', 'tx_deferred', 'tx_excess_collisions', 'tx_late_collisions', 'tx_total_collisions', 'tx_pause_frames', 'unrecoverable_errors'  |
+| 'veth_stats' | ('send_errors', 'invalid_vlan_id_packets', 'receiver_failures', 'platform_large_send_packets_dropped') |
+
+###### Metrics inserted into InfluxDB
+At this moment the net_collector provide the following metrics:
+
+| metric | tag | Description |
+| :--- | :---: | :--- |
+| entstat | host | Server that originated the observation | 
+| entstat | stats_type | Session within entstat command that generated the entry, can be : transmit_stats, general_stats, dev_stats, addon_stats, veth_stats |
+| entstat | interface | Interface that generated the oservation |
+| netstat_general | host |  Server that originated the observation |
+| netstat_general | protocol | Protocol that generated the observation |
+| netstat_general | session_group | Session within the protocol that generated information |
+| netstat_general | session | Session within Session group that generated information |
+
 #### cpu collector
 #### vio collector 
 #### dio collector
 #### oracle collector
+#### bos collector
 
 ---
 
@@ -155,3 +214,7 @@ Follow the list of scripts and it's purpose:
 | mount.sh | Check filesystem mount parameters for unsafe settings |
 
 ## TODO
+
+- [ ] Send messages to a webhook instead of syslog ( like M$ Teams or Slack )
+- [ ] Collect data from Linux Servers 
+- [ ] Gather statistics from netstat -aon ( AIX )
