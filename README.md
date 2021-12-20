@@ -10,6 +10,10 @@ At this moment moment about 10% of the original checklist have been ported to Py
  - PowerVM Virtual IO Servers
  - Oracle Databases ( using oracle_cx python module )
 
+## Who should use it ?
+This is intended to be used for data exploration, and server troubleshoot where combination of factors is crucial.<br>
+While it's possible to do performance monitoring and even capacity planning using this tool, for that you should look for [njmon](https://www.ibm.com/support/pages/njmon-and-nmon-user-meetings)
+
 ## Python Script
 
 The Python collector can run locally, within the server or use Ansible to fetch data from remote servers.<br>
@@ -37,12 +41,12 @@ You can run the checklist as a standard process through the "main.py" script or 
 #### Python shell
 Within python3 shell it can be executed as a python module as shown bellow
 
-<pre>
+```python
 import pq_checklist
 config,logger = pq_checklist.get_config(log_start=True,config_path='/etc/pq_checklist.conf')
 collector_instance = pq_checklist.general_collector.collector(config=config,logger=logger)
 collected_data = collector_instance.collect_all()
-</pre>
+```
 
 ##### API Documentation
 Most of the classes are properly commented out and python's using sphinx formatting
@@ -149,7 +153,7 @@ Each collector provide essentially two (02) things :
 
 #### net collector
 This collector is responsible for parse network related commands<br>
-on AIX and VirtualIO Servers, at this moment it will fetch the following commands:
+On AIX and VirtualIO Servers, at this moment it will fetch the following commands:
 
 - netstat -s
 - netstat -aon
@@ -164,7 +168,7 @@ At this moment this collector report warnings for several counters from [entstat
 
 In case the adapter is [etherchannel](https://www.ibm.com/docs/en/aix/7.2?topic=teaming-configuring-etherchannel) like adapter and is set to use LACP, it will also send messages in case LACP gets out of sync.
 
-###### Counters currently monitored per adapter:
+##### Counters currently monitored per adapter:
 
 | Session from entstat | Counter |
 | :---: | :--- |
@@ -174,7 +178,26 @@ In case the adapter is [etherchannel](https://www.ibm.com/docs/en/aix/7.2?topic=
 | 'addon_stats' |  ( 'rx_error_bytes', 'rx_crc_errors', 'rx_align_errors', 'rx_discards', 'rx_mf_tag_discard', 'rx_brb_discard', 'rx_pause_frames', 'rx_phy_ip_err_discards', 'rx_csum_offload_errors', 'tx_error_bytes', 'tx_mac_errors', 'tx_carrier_errors', 'tx_single_collisions', 'tx_deferred', 'tx_excess_collisions', 'tx_late_collisions', 'tx_total_collisions', 'tx_pause_frames', 'unrecoverable_errors'  |
 | 'veth_stats' | ('send_errors', 'invalid_vlan_id_packets', 'receiver_failures', 'platform_large_send_packets_dropped') |
 
-###### Metrics inserted into InfluxDB
+##### Actions to perform due HC messages
+For messages at *transmit_stats* session, this usually indicate issues on lower levels of the adapter, like :<br>
+
+- physical switches errors
+- physical adapter queue saturation ( usually something at *dev_stats* or *addon_stats* will come up too )
+- virtual adapter saturation ( usually something at veth_stats will come up )
+
+For messages under *dev_stats* and *addon_stats* this is usually tied to physical adapter saturation, like rx,tx queues, or buffer segmentation issues ( TSO/LSO )<br>
+Normally counters at this session can be remediate through tuning on the number of queue sizes ( or even amount of queues ) and matching interrupt coalescing intervals with CPU resource.
+Also, keep in mind that xoff/xon counters incrementing usually indicate CPU/bus starvation of either Server or switch side.
+
+For futher reading on the topic, please check:
+
+- [https://community.ibm.com/community/user/power/blogs/jim-cunningham1/2020/06/22/aix-network-tuning-for-10ge-and-virtual-network](https://community.ibm.com/community/user/power/blogs/jim-cunningham1/2020/06/22/aix-network-tuning-for-10ge-and-virtual-network)
+- [https://www.ibm.com/docs/en/aix/7.2?topic=parameters-network-option-tunable](https://www.ibm.com/docs/en/aix/7.2?topic=parameters-network-option-tunable)
+- [https://www.ibm.com/support/pages/10-gbit-ethernet-bad-assumptions-and-best-practice](https://www.ibm.com/support/pages/10-gbit-ethernet-bad-assumptions-and-best-practice)
+- [https://www.ibm.com/docs/en/ssw_aix_72/performance/performance_pdf.pdf](https://www.ibm.com/docs/en/ssw_aix_72/performance/performance_pdf.pdf)
+
+
+##### Metrics inserted into InfluxDB
 At this moment the net_collector provide the following metrics:
 
 | metric | tag | Description |
@@ -188,9 +211,123 @@ At this moment the net_collector provide the following metrics:
 | netstat_general | session | Session within Session group that generated information |
 
 #### cpu collector
+This collector is responsible for CPU related commands<br>
+On AIX it runs:<br>
+
+- mpstat
+- lparstat
+
+##### Collector configuration
+Follow the supported tags at the \[CPU\] session on the config file:
+
+| Tag | Default | Description |
+| :---: | :---: | :--- |
+| samples | 2 | Readings from the commands used to calculate the usage |
+| interval | 1 | Interval between the readings |
+| rq_relative_100pct | 10 | Run Queue lenght to consider that the CPU is at 100% |
+| max_usage_warn | 90 | Percentage of Utilization where the checklist trigger a high CPU usage warning |
+| min_usage_warn | 30 | Percentage of Utilization where the checklist trigger a low CPU usage warning |
+| min_core_pool_warn | 2 | Minimal amount of cores free on the shared processor pool before trigger a warning |
+| other_warnings | True | If warnings related to ilcs and vlcs will be issues |
+| involuntarycontextswitch_ratio | 30 | context switch ratio to consider that the server needs more CPUs to handle the workload |
+| involuntarycorecontextswitch_ratio | 10 | core context switch ratio to consider that the server needs more CORES |
+
+##### Health Check routines
+
+The CPU collector will use data from mpstat and lparstat to evaluate if the server is running out of CPU resources if the CPU utilization goes beyond the threshold value defined into the config.<br>
+
+- When the CPU is high, running on shared CPUs and the ilcs vs vlcs ratio is high too, it will trigger an alert suggesting to increase the Entitled Capacity of the LPAR
+- When the CPU is high, running on shared CPUs and the cs vs ics ratio is high too, it will trigger an alert suggesting to increase the amount of VCPUs assigned to the LPAR
+- When the Run Queue is high for the amount of CPUs on the server, if will trigger an alert suggesting to add more VCPUs or Cores to the LPAR ( threshold defined on config )
+- If the LPAR is running on a specific shared processor pool, it reaches its limits, it will trigger an alert
+- If the server is idle, it will trigger an alert suggesting to remove resources
+
+##### Actions to perform due HC messages
+
+  The actions on this case are kind of self explanatory
+
+##### Metrics inserted into InfluxDB
+
+| metric | tag | Description |
+| :--- | :---: | :--- |
+| mpstat | host | Server that generated the entry |
+| lparstat | host | Server that generated the entry |
+
+
 #### vio collector 
+
+This collector works only on PowerVM VirtualIO Servers and wraps around parsing the following commands:<br>
+
+- ioscli
+  - seastat
+- vnicstat
+
+##### Health Check routines
+
+At this moment all HC related messages are related to vnicstat, and it will trigger alerts when the following counters increase per adapter or per adapter's CRQ:<br>
+
+- 'low_memory'
+- 'error_indications'
+- 'device_driver_problem'
+- 'adapter_problem'
+- 'command_response_errors'
+- 'reboots'
+- 'client_completions_error'
+- 'vf_completions_error'
+
+##### Actions to perform due HC messages
+
+VNIC implements the [SRIO-V](https://en.wikipedia.org/wiki/Single-root_input/output_virtualization) specification to allow near direct access to the physical adapter.<br>
+This means that data transfer to the adapter queues can be done directly by the Client LPAR, so the behavior would be nearly the same of a physical adapter.<br>
+The glue that hold these queues together between at the Client LPAR is the Logical Port ( Slot ), which also define the behavior of the SRIO-V\'s Virtual Function. These defitions can be identified at the VIOS as the vnicserver\* adapters and the ent\* at the AIX LPARs.<br>
+Errors ( like crc/send/recv/duplicate packages ) originated at physical level are simply passed to the client lpar using VF.<br>
+When dealing with VNIC errrors, queue descriptors errors usually mean that all physical device queues got full for a moment,while VF errors could be tied to CPU/Memory starvation at Client or VIOS level.<br>
+Assuming that no physical error have been observed at the adapter or switch itself... and CPU/Memory resources are available, a queue tunning could help.<br>
+To evaluate queue sizes, it's good to consider that VNIC began on P8 servers, I think the default were something like this:
+- A maximum of 02 queues per VNIC
+- About 512 packages per Queue 
+
+This was supposed to handle at least the same amount of packages handled by SEA.<br>
+On P9 I've seen 04 and 06 queues per adapter, but as far I known, the limitations are on the NIC and bus itself, so this should increase fairly simply in the future. But keep in mind that increased capabilities won't mean that the defaults will increase too.<br>
+Also more and bigger queues don't mean higher package throughput, as CPU still needed to lift the data from the adapter into the server memory, therefore device specific tuning might be required.
+
+Also, keep in mind when the adapter is being shared across multiple VNICs the queues are shared too, therefore other clients can fill up the queues.
+
+With that said, VNIC troubleshoot isn't very straightforward, so once the queues have been tweaked, if the issues continue... it's advisable to open a PMR with IBM to investigate further.
+
+##### Metrics inserted into InfluxDB
+
+| metric | tag | Description |
+| :--- | :---: | :--- |
+| vnicstat | host | Server that generated the entry |
+| vnicstat | backing_device_name | Device at the VIOS |
+| vnicstat | client_partition_id | LPAR ID of the AIX/Linux/i Client |
+| vnicstat | client_partition_name | Hostname of the client lpar ( sometimes it comes empty when the client is linux ) |
+| vnicstat | client_operating_system | Client Operating System |
+| vnicstat | client_device_name | Device name at the client ( sometimes linux comes up with weird names ) |
+| vnicstat | client_device_location_code | Slot at the Client partition |
+| vnicstat | adapter | Adapter at VIOS |
+| vnicstat | crq | CRQ number within the adapter |
+| vnicstat | direction | rx/tx within the CRQ, within the adapter |
+| seastat_vlan | host | Server that generated the entry |
+| seastat_vlan | adapter | Adapter at VIOS |
+| seastat_vlan | vlan | Vlan which the traffic is using |
+| seastat_mac | host | Server that generated the entry |
+| seastat_mac | adapter | Adapter at VIOS |
+| seastat_mac | mac | Mac ( virtual HW ) address generating traffic |
+
+> Regarding SEA:<br>
+> Sea statistics usually comes from entstat command, therefore SEA related statistics are under entstat metrics
+
 #### dio collector
+
+##### Health Check routines
+##### Counters currently monitored per adapter:
+##### Actions to perform due HC messages
+##### Metrics inserted into InfluxDB
+
 #### oracle collector
+TODO
 #### bos collector
 
 ---
@@ -213,8 +350,16 @@ Follow the list of scripts and it's purpose:
 | seastat.sh | Get Network Statistics from VIOS SEA Adapters |
 | mount.sh | Check filesystem mount parameters for unsafe settings |
 
-## TODO
+## TODO / IDEAS
 
+- [ ] Better documentation ( Better adoption of sphinx into the APIs )
 - [ ] Send messages to a webhook instead of syslog ( like M$ Teams or Slack )
 - [ ] Collect data from Linux Servers 
 - [ ] Gather statistics from netstat -aon ( AIX )
+- [ ] Handle other ioscli commands
+- [ ] Handle Memory related commands
+- [ ] Handle process related commands
+- [ ] Gather data from SAP jobs
+- [ ] Enable HC using data inside DB, without fetching data from server ( Python mode only, probably is the next one )
+- [ ] Provide HC messages through rest APIs ( Using Flask or Tornado )
+- [ ] When providing data through REST, convert the lists in np.arrays in order to use ML to calculate trends and isolate behaviours using ML
