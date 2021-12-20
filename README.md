@@ -10,7 +10,7 @@ At this moment moment about 10% of the original checklist have been ported to Py
  - PowerVM Virtual IO Servers
  - Oracle Databases ( using oracle_cx python module )
 
-## Who should use it ?
+## Who should use it ? / Target Audience
 This is intended to be used for data exploration, and server troubleshoot where combination of factors is crucial.<br>
 While it's possible to do performance monitoring and even capacity planning using this tool, for that you should look for [njmon](https://www.ibm.com/support/pages/njmon-and-nmon-user-meetings)
 
@@ -25,9 +25,11 @@ The entry point is pq_checklist.main, as described into the main.py file.<br>
 You can run the checklist as a standard process through the "main.py" script or interactively from python shell
 
 #### OS Shell ( Bash/KSH/etc )
-  In order to facilitate execution, a shell wrapper is provided<br>
+In order to facilitate execution, a shell wrapper is provided
 
-  <pre>$ ./main.py -d</pre>
+```shell
+$ ./main.py -d
+```
 
 #####  Available parameters
 
@@ -100,7 +102,7 @@ Available tags:<br>
 | dump_file | \/tmp\/influx_queries.json | File to store failed queries or any query if a invalid db url is provided |
 
 #### [ANSIBLE]
-When running on Ansible mode, this session define targets, along with which ansible playbook will be played, along with where the artifacts and modules are/will stored
+When running on Ansible mode, this session define targets, which ansible playbook will be played, along with artifacts and modules location.<br>
 It's advisable to not change the playbook or modules, unless you're extending the checklist capabilities.<br>
 Available tags:<br>
 
@@ -342,6 +344,9 @@ On AIX it handles the following commands:
 I'll eventually document it
 
 #### bos collector
+This is a inner collector that gather information about the target server and feed into the collectors.<br>
+If the checklist's python interface is being used, device tree, serial numbers, SMT modes can be found here<br>
+The documentation of this collector comes only through python help() interface and sphinx<br>
 
 ---
 
@@ -376,4 +381,4 @@ Follow the list of scripts and it's purpose:
 - [ ] Enable HC using data inside DB, without fetching data from server ( Python mode only, probably is the next one )
 - [ ] Provide HC messages through rest APIs ( Using Flask or Tornado )
 - [ ] Review fcstat data model and HC messages related to it
-- [ ] When providing data through REST, convert the lists in np.arrays in order to use ML to calculate trends and isolate behaviours using ML
+- [ ] When providing data through REST, convert the lists in np.arrays in order to use ML to calculate trends and isolate behaviors using ML
