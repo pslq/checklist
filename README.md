@@ -320,14 +320,27 @@ With that said, VNIC troubleshoot isn't very straightforward, so once the queues
 > Sea statistics usually comes from entstat command, therefore SEA related statistics are under entstat metrics
 
 #### dio collector
+This collector handle disk and disk adapter related metrics.
+
+On AIX it handles the following commands:
+
+- iostat
+- fcstat ( for all fcs adapters on the lpar )
 
 ##### Health Check routines
-##### Counters currently monitored per adapter:
 ##### Actions to perform due HC messages
 ##### Metrics inserted into InfluxDB
 
+
+| metric | tag | Description |
+| :--- | :---: | :--- |
+| iostat_disks | host | Server that generated the entry |
+| iostat_disks | disk | Disk name |
+
+
 #### oracle collector
-TODO
+I'll eventually document it
+
 #### bos collector
 
 ---
@@ -362,4 +375,5 @@ Follow the list of scripts and it's purpose:
 - [ ] Gather data from SAP jobs
 - [ ] Enable HC using data inside DB, without fetching data from server ( Python mode only, probably is the next one )
 - [ ] Provide HC messages through rest APIs ( Using Flask or Tornado )
+- [ ] Review fcstat data model and HC messages related to it
 - [ ] When providing data through REST, convert the lists in np.arrays in order to use ML to calculate trends and isolate behaviours using ML
