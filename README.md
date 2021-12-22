@@ -51,7 +51,9 @@ collected_data = collector_instance.collect_all()
 ```
 
 ##### API Documentation
-Most of the classes are properly commented out and python's using sphinx formatting
+Most of the classes are properly commented out and python's using sphinx formatting<br>
+This is a general overview of how the checklist components are tied together:
+![General Overview](img/General_Overview.png)
 
 ---
 
