@@ -195,21 +195,21 @@ Also, keep in mind that xoff/xon counters incrementing usually indicate CPU/bus 
 
 At this moment the checklist will report hints into troubleshoot issues for the following counters:<br>
 
-| Session | Counter | Message |
-| :--- | :---: | :--- |
-| veth_stats | send_errors | Error sending packages to VIOS, If buffers are maxedout please check VIOS resources |
-| veth_stats | receiver_failures | Error possible starvation errors at the server, If buffers are maxedout please check CPU capabilities |
-| veth_stats | platform_large_send_packets_dropped | Error sending PLSO packages to VIOS, If buffers are maxedout and no backend error at physical adapters, please check VIOS resources |
-| addon_stats | rx_pause_frames | Possible saturation at switch side |
-| addon_stats | tx_pause_frames | Possible saturation at server side, Queues or CPU saturation is likely |
-| dev_stats | number_of_xoff_packets_transmitted | Possible saturation at server side, Queues or CPU saturation is likely |
-| dev_stats | number_of_xoff_packets_received | Possible saturation at server side, Queues or CPU saturation is likely |
-| dev_stats | transmit_q_no_buffers | Buffer Saturation, possible more TX queues are advisable |
-| dev_stats | transmit_swq_dropped_packets | Buffer Saturation, possible bigger queues are advisable |
-| dev_stats | receive_q_no_buffers | Buffer Saturation, possible more RX queues are advisable |
-| general_stats | no_mbuf_errors | Network stack lack of memory buffers, possible check of thewall is advisable | 
-| lacp_port_stats | partner_state | LACP Error ( possible switch port mismatch ) |
-| lacp_port_stats | actor_state | LACP Error ( possible switch port mismatch ) |
+| Session | Counter | Message | Impact, normal action | |
+| :--- | :---: | :--- | :--- | :---: |
+| veth_stats | send_errors | Error sending packages to VIOS, If buffers are maxedout please check VIOS resources | As long the servers are not running out of cores ( check cpu_collector ), normally adjust tiny/small/medium/large/huge buffers tend to address these issues | :yellow_circle: |
+| veth_stats | receiver_failures | Error possible starvation errors at the server, If buffers are maxedout please check CPU capabilities | As long the servers are not running out of cores ( check cpu_collector ), normally adjust tiny/small/medium/large/huge buffers tend to address these issues | :yellow_circle: |
+| veth_stats | platform_large_send_packets_dropped | Error sending PLSO packages to VIOS, If buffers are maxedout and no backend error at physical adapters, please check VIOS resources | As long the servers are not running out of cores ( check cpu_collector ), normally adjust the amount of dog_threads on AIX or sea_threads on VIOS help | :yellow_circle: |
+| addon_stats | rx_pause_frames | Possible saturation at switch side | Nothing can be done at server side | :yellow_circle: |
+| addon_stats | tx_pause_frames | Possible saturation at server side, Queues or CPU saturation is likely | As long the servers are not running out of cores ( check cpu_collector ), normally adjust intr_priority, intr_time might help under this issues | :yellow_circle: |
+| dev_stats | number_of_xoff_packets_transmitted | Possible saturation at server side, Queues or CPU saturation is likely | As long the servers are not running out of cores ( check cpu_collector ), normally adjust intr_priority, intr_time might help under this issues | :yellow_circle: |
+| dev_stats | number_of_xoff_packets_received | Possible saturation at server side, Queues or CPU saturation is likely | Nothing can be done at server side | :yellow_circle: |
+| dev_stats | transmit_q_no_buffers | Buffer Saturation, possible more TX queues are advisable | As long the servers are not running out of cores ( check cpu_collector ), normally adjust *queue_size*, *tx_max_pkts*, *tx_limit* might help | :yellow_circle: |
+| dev_stats | transmit_swq_dropped_packets | Buffer Saturation, possible bigger queues are advisable | Can lead to slowdowns| :yellow_circle: |
+| dev_stats | receive_q_no_buffers | Buffer Saturation, possible more RX queues are advisable | Possible the combination of packages in all queues exceeded the amount of packages allowed in buffer, more queues might help in better management ( *queues_rx* increases ), otherwise increase the total amount of packages in buffer might help | :red_circle: |
+| general_stats | no_mbuf_errors | Network stack lack of memory buffers, possible check of thewall is advisable | Possible innability of offload the packages from the adapter into AIX network stack, increase the network buffers ( at "no" command ), specially *thewall* might help| :yellow_circle: |
+| lacp_port_stats | partner_state | LACP Error ( possible switch port mismatch ) | Can lead to loss of connectivity, check port-channel on both switches and server side | :red_circle: |
+| lacp_port_stats | actor_state | LACP Error ( possible switch port mismatch ) | Can lead to loss of connectivity, check port-channel on both switches and server side  | :red_circle: |
 
 For futher reading on the topic, please check:
 
@@ -265,6 +265,16 @@ The CPU collector will use data from mpstat and lparstat to evaluate if the serv
 - If the server is idle, it will trigger an alert suggesting to remove resources
 
 ##### Actions to perform due HC messages
+
+| Message | Description | |
+| :--- | :--- |  |
+| High CPU utilization detected along with possible core starvation of the lpar, due high ilcs vs vlcs ratio, values... | This message appear when the application is demanding more cores than it's promptly available to the server, core allocation above entitlement suffers from latency spikes and priority calculations | :yellow_circle |
+| High CPU utilization detected along with possible cpu starvation of the lpar, due high cs vs ics ratio, values... | This message appear when there aren't enought VCPUs on the server for the amount of running applications, this will lead to spikes in run queue, which might lead to server crashes | :orange_circle |
+| High CPU utilization detected, values... | High CPU detected and apprently the server has enough resources, this might be a problem and investigation is required | :red_circle: |
+| LOW CPU utilization detected, values... | The server has more resources than it actually needs, CPU/Core removal could benefit the whole system | :green_circle: |
+| High run queue detected on the server, value... | Normaly this happends when the process start to acomulate on the server, when this reach normally 10 x amount of VCPUs the server crash | :red_circle: |
+| Shared processor pool near its capacity limit, value... | This indicate that the server is running inside a shared processor pool that is at it's limit, which will starve the lpars, more cores on the pool are needed | :orange_circle: |
+
 
   The actions on this case are kind of self explanatory
 

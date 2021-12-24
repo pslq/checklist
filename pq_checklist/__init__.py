@@ -71,7 +71,8 @@ def load_file(logger, file:str, specific_replacements:list=[]) -> str:
 
 #######################################################################################################################
 def debug_post_msg(logger, msg:str, screen_only:bool=False, no_screen:bool = False, end:str='\n', \
-                           flush:bool=False, raise_type=None) -> None:
+                           flush:bool=False, raise_type=None,
+                           pre_str:str = "checklist : ") -> None:
   '''
   Parameters :
     logger      = pq_logger class or None
@@ -92,23 +93,25 @@ def debug_post_msg(logger, msg:str, screen_only:bool=False, no_screen:bool = Fal
   from sys import stderr as sys_stderr
   from sys import stdout as sys_stdout
 
+  to_send = '%s%s'%(pre_str, msg)
+
   try :
     if logger and not screen_only :
       cur_level = logger.getEffectiveLevel()
       if   cur_level >= 40 :
-        logger.error(msg)
+        logger.error(to_send)
       elif cur_level >= 30 :
-        logger.warning(msg)
+        logger.warning(to_send)
       elif cur_level >= 20 :
-        logger.info(msg)
+        logger.info(to_send)
       elif cur_level >= 10 :
-        logger.debug(msg)
+        logger.debug(to_send)
 
     if not no_screen :
-      print(msg, file=sys_stderr, end=end, flush=flush)
+      print(to_send, file=sys_stderr, end=end, flush=flush)
 
     if raise_type :
-      raise raise_type(msg)
+      raise raise_type(to_send)
 
   except Exception as e:
     raise Exception(e)
