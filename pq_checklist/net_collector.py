@@ -25,7 +25,9 @@ class collector(Base_collector) :
         }
 
     self.entstat_check_groups = {
-        'transmit_stats' : ( 'transmit_errors', 'receive_errors', 'transmit_packets_dropped',
+        'transmit_stats' : ( 'transmit_errors',
+                             'receive_errors',
+                             'transmit_packets_dropped',
                              'receive_packets_dropped', 'bad_packets', 's_w_transmit_queue_overflow',
                              'no_carrier_sense', 'crc_errors', 'dma_underrun', 'dma_overrun',
                              'lost_cts_errors', 'alignment_errors', 'max_collision_errors',
@@ -46,6 +48,20 @@ class collector(Base_collector) :
         'veth_stats'    : ('send_errors', 'invalid_vlan_id_packets', 'receiver_failures',
                            'platform_large_send_packets_dropped')
     }
+
+    self.entstat_group_messages = { 'veth_stats' : { 'send_errors' : 'Error sending packages to VIOS, If buffers are maxedout please check VIOS resources',
+                                                     'receiver_failures' : 'Error possible starvation errors at the server, If buffers are maxedout please check CPU capabilities',
+                                                     'platform_large_send_packets_dropped' : 'Error sending PLSO packages to VIOS, If buffers are maxedout and no backend error at physical adapters, please check VIOS resources' },
+                                    'addon_stats' : { 'rx_pause_frames' : 'Possible saturation at switch side',
+                                                      'tx_pause_frames' : 'Possible saturation at server side, Queues or CPU saturation is likely' },
+                                    'dev_stats' : { 'number_of_xoff_packets_transmitted' : 'Possible saturation at server side, Queues or CPU saturation is likely',
+                                                    'number_of_xoff_packets_received' : 'Possible saturation at server side, Queues or CPU saturation is likely',
+                                                    'transmit_q_no_buffers' : 'Buffer Saturation, possible more TX queues are advisable',
+                                                    'transmit_swq_dropped_packets' : 'Buffer Saturation, possible bigger queues are advisable',
+                                                    'receive_q_no_buffers' : 'Buffer Saturation, possible more RX queues are advisable' },
+                                    'general_stats' : { 'no_mbuf_errors' : 'Network stack lack of memory buffers, possible check of thewall is advisable'}
+                                  }
+
 
 
     return(None)
@@ -127,15 +143,21 @@ class collector(Base_collector) :
               if entstat['stats'][dev]['transmit_stats'][stat] > 0 :
                 try :
                   if values_from_db[dev][check_group][stat][3][-1] != entstat['stats'][dev]['transmit_stats'][stat][-1] :
-                    base_message = 'The %s at %s session on interface $s changed from %d to %d'%(
+                    try :
+                      base_message = '%s : Adapter info : %s %s %s %d %d '%(
+                          self.entstat_group_messages[check_group][stat], stat,check_group,dev,
+                          values_from_db[dev][check_group][stat][3][-1], entstat['stats'][dev]['transmit_stats'][stat])
+                    except :
+                      base_message = 'The %s at %s session on interface %s changed from %d to %d'%(
                         stat,check_group,dev, values_from_db[dev][check_group][stat][3][-1],
                         entstat['stats'][dev]['transmit_stats'][stat])
+
                     if values_from_db[dev][check_group][stat][2] < stationary_treshold :
-                      messages.append('%s and is stationary on %f of the time'%(base_message,values_from_db[dev][check_group][stat][2]))
+                      messages.append('%s : stationary on %f'%(base_message,values_from_db[dev][check_group][stat][2]))
                     elif abs(values_from_db[dev][check_group][stat][1]/entstat['stats'][dev]['transmit_stats'][stat][-1]) > change_tolerance :
-                      messages.append('%s and is above treshold of %f'%(base_message,values_from_db[dev][check_group][stat][1]))
+                      messages.append('%s : treshold of %f'%(base_message,values_from_db[dev][check_group][stat][1]))
                     elif debug :
-                      messages.append('The %s counter at %s is at %d on interface $s'%(stat,check_group, entstat['stats'][dev]['transmit_stats'][stat],dev))
+                      messages.append(base_message)
                 except :
                   messages.append('The %s counter at %s is at %d on interface $s and no check to the database were possible'%(stat,check_group, entstat['stats'][dev]['transmit_stats'][stat],dev))
             except Exception as e :
@@ -150,6 +172,6 @@ class collector(Base_collector) :
       if 'lacp_port_stats' in entstat['stats'][dev] :
         if not ( entstat['stats'][dev]['lacp_port_stats']['partner_state']['synchronization']  == \
                  entstat['stats'][dev]['lacp_port_stats']['actor_state']['synchronization'] == 'IN_SYNC' ) :
-          messages.append('LACP Error at interface %s'%dev)
+          messages.append('LACP Error ( possible switch port mismatch ) at interface %s'%dev)
 
     return(messages)

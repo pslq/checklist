@@ -193,6 +193,24 @@ For messages under *dev_stats* and *addon_stats* this is usually tied to physica
 Normally counters at this session can be remediate through tuning on the number of queue sizes ( or even amount of queues ) and matching interrupt coalescing intervals with CPU resource.
 Also, keep in mind that xoff/xon counters incrementing usually indicate CPU/bus starvation of either Server or switch side.
 
+At this moment the checklist will report hints into troubleshoot issues for the following counters:<br>
+
+| Session | Counter | Message |
+| :--- | :---: | :--- |
+| veth_stats | send_errors | Error sending packages to VIOS, If buffers are maxedout please check VIOS resources |
+| veth_stats | receiver_failures | Error possible starvation errors at the server, If buffers are maxedout please check CPU capabilities |
+| veth_stats | platform_large_send_packets_dropped | Error sending PLSO packages to VIOS, If buffers are maxedout and no backend error at physical adapters, please check VIOS resources |
+| addon_stats | rx_pause_frames | Possible saturation at switch side |
+| addon_stats | tx_pause_frames | Possible saturation at server side, Queues or CPU saturation is likely |
+| dev_stats | number_of_xoff_packets_transmitted | Possible saturation at server side, Queues or CPU saturation is likely |
+| dev_stats | number_of_xoff_packets_received | Possible saturation at server side, Queues or CPU saturation is likely |
+| dev_stats | transmit_q_no_buffers | Buffer Saturation, possible more TX queues are advisable |
+| dev_stats | transmit_swq_dropped_packets | Buffer Saturation, possible bigger queues are advisable |
+| dev_stats | receive_q_no_buffers | Buffer Saturation, possible more RX queues are advisable |
+| general_stats | no_mbuf_errors | Network stack lack of memory buffers, possible check of thewall is advisable | 
+| lacp_port_stats | partner_state | LACP Error ( possible switch port mismatch ) |
+| lacp_port_stats | actor_state | LACP Error ( possible switch port mismatch ) |
+
 For futher reading on the topic, please check:
 
 - [https://community.ibm.com/community/user/power/blogs/jim-cunningham1/2020/06/22/aix-network-tuning-for-10ge-and-virtual-network](https://community.ibm.com/community/user/power/blogs/jim-cunningham1/2020/06/22/aix-network-tuning-for-10ge-and-virtual-network)
