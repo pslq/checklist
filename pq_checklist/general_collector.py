@@ -129,7 +129,7 @@ class collector(Base_collector) :
         if self.healthcheck and get_hc :
           with db_client(self.config,self.logger) as db :
             for msg in measurement_povider.health_check(update_from_system=update_data_on_measurement, db=db) :
-              debug_post_msg(self.logger,'MGS FROM %s : %s'%(hosts,msg))
+              debug_post_msg(self.logger,'HC MGS FROM %s : %s'%(hosts,msg))
 
     # Write information metrics to influxdb
     with db_client(self.config,self.logger) as db :

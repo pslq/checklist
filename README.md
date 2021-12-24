@@ -160,6 +160,10 @@ The Message report behavior follow a few patterns to minimize duplicity:
 - Validate if it isn't something that normally changes
 - If it changes normally, if it changing above normal rate ( right now just evaluate the average for the past 24 hours )
 
+##### Message Location
+All Healcheck messages go to syslog and use the script name as a main tag to messages:<br>
+- **HC MGS FROM** Healthcheck from a specific server ( message details bellow )
+
 
 #### net collector
 This collector is responsible for parse network related commands<br>

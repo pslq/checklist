@@ -72,7 +72,7 @@ def load_file(logger, file:str, specific_replacements:list=[]) -> str:
 #######################################################################################################################
 def debug_post_msg(logger, msg:str, screen_only:bool=False, no_screen:bool = False, end:str='\n', \
                            flush:bool=False, raise_type=None,
-                           pre_str:str = "checklist : ") -> None:
+                           pre_str:str = "") -> None:
   '''
   Parameters :
     logger      = pq_logger class or None
