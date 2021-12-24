@@ -268,7 +268,7 @@ The CPU collector will use data from mpstat and lparstat to evaluate if the serv
 
 | Message | Description | |
 | :--- | :--- | :---:  |
-| High CPU utilization detected along with possible core starvation of the lpar, due high ilcs vs vlcs ratio, values... | This message appear when the application is demanding more cores than it's promptly available to the server, core allocation above entitlement suffers from latency spikes and priority calculations | :yellow_circle |
+| High CPU utilization detected along with possible core starvation of the lpar, due high ilcs vs vlcs ratio, values... | This message appear when the application is demanding more cores than it's promptly available to the server, core allocation above entitlement suffers from latency spikes and priority calculations | :yellow_circle: |
 | High CPU utilization detected along with possible cpu starvation of the lpar, due high cs vs ics ratio, values... | This message appear when there aren't enought VCPUs on the server for the amount of running applications, this will lead to spikes in run queue, which might lead to server crashes | :orange_circle: |
 | High CPU utilization detected, values... | High CPU detected and apprently the server has enough resources, this might be a problem and investigation is required | :red_circle: |
 | LOW CPU utilization detected, values... | The server has more resources than it actually needs, CPU/Core removal could benefit the whole system | :green_circle: |
