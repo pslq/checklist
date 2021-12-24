@@ -207,7 +207,7 @@ Also, keep in mind that xoff/xon counters incrementing usually indicate CPU/bus 
 
 At this moment the checklist will report hints into troubleshoot issues for the following counters:<br>
 
-| Session | Counter | Message | Impact, normal action | |
+| Session | Counter | Message | Impact, normal action | Priority |
 | :--- | :---: | :--- | :--- | :---: |
 | veth_stats | send_errors | Error sending packages to VIOS, If buffers are maxedout please check VIOS resources | As long the servers are not running out of cores ( check cpu_collector ), normally adjust tiny/small/medium/large/huge buffers tend to address these issues | :yellow_circle: |
 | veth_stats | receiver_failures | Error possible starvation errors at the server, If buffers are maxedout please check CPU capabilities | As long the servers are not running out of cores ( check cpu_collector ), normally adjust tiny/small/medium/large/huge buffers tend to address these issues | :yellow_circle: |
@@ -278,7 +278,7 @@ The CPU collector will use data from mpstat and lparstat to evaluate if the serv
 
 ##### Actions to perform due HC messages
 
-| Message | Description | |
+| Message | Description | Priority |
 | :--- | :--- | :---:  |
 | High CPU utilization detected along with possible core starvation of the lpar, due high ilcs vs vlcs ratio, values... | This message appear when the application is demanding more cores than it's promptly available to the server, core allocation above entitlement suffers from latency spikes and priority calculations | :yellow_circle: |
 | High CPU utilization detected along with possible cpu starvation of the lpar, due high cs vs ics ratio, values... | This message appear when there aren't enought VCPUs on the server for the amount of running applications, this will lead to spikes in run queue, which might lead to server crashes | :orange_circle: |
