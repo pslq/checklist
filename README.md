@@ -165,6 +165,8 @@ All Healcheck messages go to syslog and use the script name as a main tag to mes
 - **HC MGS FROM** Healthcheck from a specific server ( message details bellow )
 
 
+---
+
 #### net collector
 This collector is responsible for parse network related commands<br>
 On AIX and VirtualIO Servers, at this moment it will fetch the following commands:
