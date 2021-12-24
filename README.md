@@ -151,8 +151,14 @@ Each collector provide essentially two (02) things :
 > Don't engage into tuning crusades or HW capacity endeavors without engage the proper support channels ( like your solution provider )
 
 #### Health check
-  Each collector has it's own HealthCheck ( HC ) set of validations, and at each running cycle the HC messages consolidated through the collectors are pushed to syslog<br>
-  The messages follow the directives defined at the checklist configuration file
+Each collector has it's own HealthCheck ( HC ) set of validations, and at each running cycle the HC messages consolidated through the collectors are pushed to syslog<br>
+The messages follow the directives defined at the checklist configuration file
+
+The Message report behavior follow a few patterns to minimize duplicity:
+
+- Validate that the counter/metric has changed since previous reading whatever is possible
+- Validate if it isn't something that normally changes
+- If it changes normally, if it changing above normal rate ( right now just evaluate the average for the past 24 hours )
 
 
 #### net collector
