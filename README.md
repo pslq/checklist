@@ -2,16 +2,16 @@
 This is the repository for the AIX's Checklist tool
 
 ## Checklist ?!
-The checklist started as a Korn Shell script to facilitate health-check assessments and performance evaluation of AIX Servers
+The checklist started as a Korn Shell script to facilitate health-check assessments and performance evaluation of AIX Servers.
 As it evolved, some of it's contents were split into smaller scripts that could be integrated into 3rd party monitoring tools, like Splunk.
-However as analysis became more complex and correlate behavior of several servers in parallel became more important, a major re-write in Python is being done.
+However in order to facilitate out of box analysis of complex environment and better correlation of server behavior, a major rewrite in Python have been initiated.
 At this moment moment about 10% of the original checklist have been ported to Python and it supports:
  - AIX servers 
  - PowerVM Virtual IO Servers
  - Oracle Databases ( using oracle_cx python module )
 
 ## Who should use it ? / Target Audience
-This is intended to be used for data exploration, and server troubleshoot where combination of factors is crucial.<br>
+This is intended to be used for data exploration and server troubleshoot, mainly where combination of factors is crucial.<br>
 While it's possible to do performance monitoring and even capacity planning using this tool, for that you should look for [njmon](https://www.ibm.com/support/pages/njmon-and-nmon-user-meetings)
 
 ## Python Script
