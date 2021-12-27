@@ -2,9 +2,9 @@
 This is the repository for the AIX's Checklist tool
 
 ## Checklist ?!
-The checklist started as a Korn Shell script to facilitate health-check assessments and performance evaluation of AIX Servers.
-As it evolved, some of it's contents were split into smaller scripts that could be integrated into 3rd party monitoring tools, like Splunk.
-However in order to facilitate out of box analysis of complex environment and better correlation of server behavior, a major rewrite in Python have been initiated.
+The checklist started as a shell script to facilitate health-check assessments and performance evaluation of servers.<br>
+As it evolved, some of it's contents were split into smaller scripts that could be integrated into 3rd party monitoring tools, like Splunk.<br>
+However in order to facilitate out of box analysis of complex environment and better correlation of server behavior, a major rewrite in Python have been initiated.<br>
 At this moment moment about 10% of the original checklist have been ported to Python and it supports:
  - AIX servers 
  - PowerVM Virtual IO Servers
