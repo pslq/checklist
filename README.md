@@ -232,9 +232,9 @@ For futher reading on the topic, please check:
 
 
 ##### Metrics inserted into InfluxDB
-At this moment the net_collector provide the following metrics:
+At this moment the net_collector provide the following measurements:
 
-| metric | tag | Description |
+| measurement | tag | Description |
 | :--- | :---: | :--- |
 | entstat | host | Server that originated the observation | 
 | entstat | stats_type | Session within entstat command that generated the entry, can be : transmit_stats, general_stats, dev_stats, addon_stats, veth_stats |
@@ -292,7 +292,7 @@ The CPU collector will use data from mpstat and lparstat to evaluate if the serv
 
 ##### Metrics inserted into InfluxDB
 
-| metric | tag | Description |
+| measurement | tag | Description |
 | :--- | :---: | :--- |
 | mpstat | host | Server that generated the entry |
 | lparstat | host | Server that generated the entry |
@@ -341,7 +341,7 @@ With that said, VNIC troubleshoot isn't very straightforward, so once the queues
 
 ##### Metrics inserted into InfluxDB
 
-| metric | tag | Description |
+| measurement | tag | Description |
 | :--- | :---: | :--- |
 | vnicstat | host | Server that generated the entry |
 | vnicstat | backing_device_name | Device at the VIOS |
@@ -375,15 +375,115 @@ On AIX it handles the following commands:
 ##### Actions to perform due HC messages
 ##### Metrics inserted into InfluxDB
 
-
-| metric | tag | Description |
+| measurement | tag | Description |
 | :--- | :---: | :--- |
 | iostat_disks | host | Server that generated the entry |
 | iostat_disks | disk | Disk name |
 
 
 #### oracle collector
-I'll eventually document it
+This collector connect into remote Oracle database instances to gather performance measurements and report basic slowdown scenarios<br>
+
+##### Collector configuration
+
+All configuration of this collector reside under the \[ORACLE\] tag within the config file 
+
+| Tag | Default | Description |
+| :---: | :---: | :--- |
+| conn_type | local | How the connection to the database will be stablished **local** will use sqlplus to fetch data and **remote** will use cx_oracle, right now only **remote** works |
+| ora_user  | [ 'oracle', 'oracle' ] | must be a list ( even if only one ) of users that will be used to connect into the database |
+| ora_home  | [ '/oracle/database/dbhome_1', '/oracle/grid' ] | must be a list ( even if only one ) of orahome, not used when conn_type = remote|
+| ora_sid   | [ 'tasy21', '+ASM1' ] | must be a list ( even if only one ) of SIDs, not used when conn_type = remote |
+| ora_logon | [ '/ as sysdba', '/ as sysasm' ] |  must be a list ( even if only one ) of users used to connect, not used when conn_type = remote |
+| ora_pass  | [ pass, pass ] | must be a list ( even if only one ) of passwords used to connect into the databases |
+| ora_dsn  | [ host/service, host/service, ] | must be a list ( even if only one ) of oracle DSN used to connect into remote databases |
+| ora_role = [ 0, 2 ] | User role used to connect into the remote database, 0 = DEFAULT_AUTH, 2 = SYSDBA, 32768 = SYSASM |
+| ora_users_to_ignore | [ 'PUBLIC', 'APPQOSSYS', 'CTXSYS', 'ORDPLUGINS', 'GSMADMIN_INTERNAL', 'XDB', 'ORDDATA', 'DVSYS', 'OUTLN', 'SYSTEM', 'ORACLE_OCM', 'WMSYS', 'OLAPSYS', 'LBACSYS', 'SYS', 'MDSYS', 'DBSNMP', 'SI_INFORMTN_SCHEMA', 'DVF', 'DBSFWUSER', 'AUDSYS', 'REMOTE_SCHEDULER_AGENT', 'OJVMSYS', 'ORDSYS' ] | List of users to ignore when tracking objects |
+| check_statistics_days | 2 | How many days before consider statistics of a modified object old |
+| log_switches_hour_alert | 3 | Amount of log switches to be tolerated before issue a warning into syslog |
+| script_dumpdir | /tmp/oracle_sql | When check for fragmentation and old statics, the system can also create defrag and gather stats scripts, to facilitate maintanance, those scripts will be stored on this directory |
+| dump_longops | True | If when detect a longops query, dump its execution plan in order to look for possible causes for the specific longop |
+| dump_running_ids | True | If dump of running queries, when detected is desireable |
+| table_reclaimable_treshold | 50 | Amount of fragmentation tolerated before issue a warning so the admin might take action |
+| stats_max_parallel | 10 | Parallel degree used to gather statistics |
+| stats_estimate_percent | 60 | Estimate percentage used to gather statistics |
+
+##### Health Check routines
+
+At this moment the oracle collector doesn't retrieve information from influxdb in order to evaluate the alerts before issue them, therefore duplicate alerts might happen frequently.<br>
+Follow the alert messages being reported:<br>
+
+| Message | Description | Priority |
+| :--- | :--- | :---:  |
+| The instance %s of database %s switched logs %d times at : %s | There are too many changes happening into the database and the redologs are not big enough to fullfill it, therefore a log switch is issued, freezing changes until the switch is completed | :orange_circle: |
+| The database %s has a total of %d longops happening, please check dumped queries | There are some slow queries running into the database, which indicate slowdowns | :green_circle: |
+| The Query %s from database %s has a execution plan too long, possible problems | A specific query is taking a long time to complete, possible logical problem in the way that the query is being executed is happening | :yellow_circle: |
+| The Query %s from database %s has a full table scan, please check | A specific query is taking a long time to complete, and doing a full table scan along with it, there is a high chance of a column not be indexed properly | :orange_circle: |
+| Long queries detected using full table scan, please check %d | Amount of queries performing full table scan detected into the system | :green_circle: |
+
+##### Statistics and scripts
+
+This collector will scan tables within the database in order to find tables that might need have its statistics updated.<br>
+The key factor to determine if the statistics is old the *check_statistics_days* tag within the config file; If the statistics are newer than whats defined on the tag, the collector will not check it.
+
+If the statistics is older than what's defined on *check_statistics_days*, then will follow the following criteria:
+
+* If the table had changes since last statistics
+
+
+
+##### Metrics inserted into InfluxDB
+
+| measurement | tag | Description |
+| :--- | :---: | :--- |
+| oracle_logswitches | database | Name of database that generated the metric |
+| oracle_logswitches | <instance_name> | amount of logswitches this specific instance generated at the designated timeframe |
+| oracle_stalestats  | database | Name of database that generated the metric |
+| oracle_stalestats  | user | owner of the stale objects |
+| oracle_stalestats  | total | amount of objects for the specific user |
+| oracle_tablespaces | database | Name of database that generated the metric |
+| oracle_tablespaces | tablespace | tablespace name |
+| oracle_tablespaces | total | Total amount of bytes |
+| oracle_tablespaces | total_physical_cap | Total amount of physical bytes |
+| oracle_tablespaces | free | Free space |
+| oracle_tablespaces | free_pct | Percentage of free space into the tablespace |
+| oracle_longops | database | Name of database that generated the metric |
+| oracle_longops | server | Server where the longop was identified |
+| oracle_longops | instance | Database instance that originated the longops |
+| oracle_longops | user | User that were running the query ( longop ) |
+| oracle_longops | hash_value | Hash value of the query |
+| oracle_longops | sql_id | sql_id of the query |
+| oracle_wait_events | database | Name of database that generated the metric |
+| oracle_wait_events | server | Server where the longop was identified |
+| oracle_wait_events | instance | Database instance that originated the longops |
+| oracle_wait_events | wait_class | Class of the wait event |
+| oracle_wait_events | total_waits | Total wait events for this class |
+| oracle_wait_events | time_waited | Total time waited on this class |
+| oracle_wait_events | total_waits_fg | Total amount of foreground wait events for this class |
+| oracle_wait_events | time_waited_fg | Amount of time foreground events spent on this wait class |
+| oracle_running_queries | database | Name of database that generated the metric |
+| oracle_running_queries | total | Amount of queries running concurrently on this database |
+| oracle_sql_monitor | database | Name of database that generated the metric |
+| oracle_sql_monitor | status | Query status from sql monitor |
+| oracle_sql_monitor | username  | User running the query |
+| oracle_sql_monitor | module | sql module being used on the query |
+| oracle_sql_monitor | service_name | Service name |
+| oracle_sql_monitor | sql_id | Query sql_id |
+| oracle_sql_monitor | tot_time | Amount of time spent on this query |
+| oracle_temp_tablespaces | database | Name of database that generated the metric |
+| oracle_temp_tablespaces | tablespace | tablespace name |
+| oracle_temp_tablespaces | usage_in_mb | Amount of space used in Megabytes |
+| oracle_sessions | host | servername running the database |
+| oracle_sessions | instance | Instance name |
+| oracle_sessions | total_sessions | Amount of sessions |
+| oracle_objects | database | Name of database that generated the metric |
+| oracle_objects | user | Owner of the object |
+| oracle_objects | valid | Amount of valid objects |
+| oracle_objects | invalid | Amount of invalid objects |
+
+> **Important** <br>
+> The data model of this collector might and will change in the near future, in order to provide more useful information
+
 
 #### bos collector
 This is a inner collector that gather information about the target server and feed into the collectors.<br>
