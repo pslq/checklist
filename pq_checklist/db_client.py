@@ -1,5 +1,5 @@
 from . import debug_post_msg, get_config
-import json, importlib, os.path
+import json, importlib, os.path, os
 from . import load_file as load_query_file
 import datetime
 #######################################################################################################################
@@ -71,21 +71,28 @@ class db_client() :
     Returns:
        Bool -> True,False  If some kind of connection or write off mech have been defined
     '''
-    if importlib.util.find_spec('influxdb_client') is not None and \
-       self.config['INFLUXDB']['url'] != "<influxdb_url>" and len(self.config['INFLUXDB']['url']) > 0 :
+    try :
       from influxdb_client import InfluxDBClient, Point, WritePrecision
-      try :
-        self.db = InfluxDBClient(**dict(self.config.items('INFLUXDB')))
+      influx_config = { 'url' : os.getenv('INFLUX_URL'), 'token' : os.getenv('INFLUX_TOKEN'),
+                        'org' : os.getenv('INFLUX_ORG'), 'bucket': os.getenv('INFLUX_BUCKET'), 'timeout' : 5000 }
+      influx_config = dict(self.config.items('INFLUXDB')) if 0 in [ len(v) for v in influx_config.values() ]
+      if 0 in [ len(v) for v in influx_config.values() ] :
+        try :
+          self.db = InfluxDBClient(**dict(self.config.items('INFLUXDB')))
+        except Exception as e :
+          self.db = None
+          debug_post_msg(self.logger,'Error connecting to influxDB: %s'%e)
+    except Exception as e :
+      debug_post_msg(self.logger,
+                       'InfluxDB not configured or influxdb_client not installed, or loglevel set to debug. Queries will be saved at dumpfile')
 
-      except Exception as e :
-        debug_post_msg(self.logger,'Error connecting to influxDB: %s'%e)
-    if self.logger.getEffectiveLevel() <= 10  and len(self.config['INFLUXDB']['dump_file']) :
+    if self.logger.getEffectiveLevel() <= 10 and \
+       len(self.config['INFLUXDB']['dump_file']) and \
+       not self.db :
       try :
         self.output_file = open(self.config['INFLUXDB']['dump_file'], 'a+')
       except Exception as e :
         debug_post_msg(self.logger,'Error opening dump file: %s'%e, raise_type=Exception)
-      debug_post_msg(self.logger,
-                     'InfluxDB not configured or influxdb_client not installed, or loglevel set to debug. Queries will be saved at dumpfile')
     return(None)
 
 #######################################################################################################################

@@ -29,7 +29,6 @@ def health_check(self,update_from_system:bool = True) -> list :
     for db,data in databases.items() :
       for instance,dates in data.items() :
         for dt,cnt in dates.items() :
-          #if cnt > self.log_switches_hour_alert and dt > datetime.datetime.utcnow()- datetime.timedelta(minutes=60) :
           if cnt > self.log_switches_hour_alert :
             ret.append('The instance %s of database %s switched logs %d times at : %s'%(instance,db,cnt,str(dt)))
 

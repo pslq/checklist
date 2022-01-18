@@ -1,4 +1,7 @@
 [INFLUXDB]
+# The checklist will look first to the environment variables INFLUX_URL INFLUX_TOKEN INFLUX_ORG INFLUX_BUCKET
+# If those variables are not set, then the config file will be checked
+
 url = <influxdb_url>
 token = <influxdb_token>
 org = <influxdb_org>
