@@ -1,4 +1,4 @@
-from . import debug_post_msg
+from .utils.debug_post_msg import debug_post_msg
 from collections import deque
 from threading import RLock
 

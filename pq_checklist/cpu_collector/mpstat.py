@@ -1,8 +1,7 @@
-#!/opt/freeware/bin/python3
-
 # All imports used
-from .Stats_Parser import StatsParser
-from . import avg_list, line_cleanup
+from ..Stats_Parser import StatsParser
+from ..utils.avg_list import avg_list
+from ..utils.line_cleanup import line_cleanup
 import datetime
 
 class parser(StatsParser) :

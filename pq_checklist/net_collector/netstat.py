@@ -1,8 +1,8 @@
-#!/opt/freeware/bin/python3
-
 # All imports used
-from . import debug_post_msg, try_conv_complex, avg_list
-from .Stats_Parser import StatsParser
+from ..utils.avg_list import avg_list
+from ..utils.debug_post_msg import debug_post_msg
+from ..utils.try_conv_complex import try_conv_complex
+from ..Stats_Parser import StatsParser
 import csv, datetime
 
 class parser(StatsParser) :

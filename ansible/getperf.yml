@@ -30,6 +30,16 @@
       register: iostat
       when: bos_mp.stat.exists != True
 
+    - name: vmstat_sSB
+      command: vmstat -sSB
+      register: vmstat_sSB
+      when: bos_mp.stat.exists != True
+
+    - name: vmstat_sv
+      command: vmstat -sv
+      register: vmstat_sv
+      when: bos_mp.stat.exists == True
+
     - name: lsdev_class
       command: lsdev -C -H -S a -F name:class:subclass:type
       poll: 02
@@ -88,6 +98,27 @@
       register: fcstat
       poll: 02
       when: bos_mp.stat.exists == True
+
+    - name: ioo
+      command: ioo -aF
+      register: ioo
+      when: bos_mp.stat.exists == True
+
+    - name: vmo
+      command: vmo -aF
+      register: vmo
+      when: bos_mp.stat.exists == True
+
+    - name: no
+      command: no -aF
+      register: no
+      when: bos_mp.stat.exists == True
+
+    - name: schedo
+      command: schedo -aF
+      register: schedo
+      when: bos_mp.stat.exists == True
+
   
     - name: uname_a
       command: uname -a

@@ -1,7 +1,13 @@
 # import external functions
-def merge_dict(*dcts) :
-  from ._merge_dict import merge_dict
-  return(merge_dict(*dcts))
+
+from .utils.debug_post_msg import debug_post_msg
+from .utils.merge_dict import merge_dict
+from .utils.try_conv_complex import try_conv_complex
+from .utils.avg_list import avg_list
+from .utils.get_list_avg_and_diff import get_list_avg_and_diff
+from .utils.pq_round_number import pq_round_number
+from .utils.line_cleanup import line_cleanup
+from .utils.get_command_output import get_command_output
 
 
 
@@ -39,21 +45,6 @@ def pq_logger(log_level:int=10, stdout:bool=False, name:str=__name__, to_dev_log
   return(logger)
 
 #######################################################################################################################
-def pq_round_number(number,ndigits=2,tp=float) :
-  return(tp(round(number,ndigits=ndigits)))
-
-
-#######################################################################################################################
-def get_list_avg_and_diff(lst:list, calculate_diff:bool=True) :
-  if calculate_diff :
-    just_changes = [ v if p == 0 else v-lst[p-1] for p,v in enumerate(lst) ]
-  else :
-    just_changes = lst
-  change_rate = pq_round_number([ True if p == 0 else True if v-just_changes[p-1] == 0 else False for p,v in enumerate(just_changes) ].count(False)/len(just_changes))
-  return(just_changes,avg_list(just_changes), change_rate)
-
-
-#######################################################################################################################
 def load_file(logger, file:str, specific_replacements:list=[]) -> str:
   '''
   Load and parse files
@@ -77,165 +68,6 @@ def load_file(logger, file:str, specific_replacements:list=[]) -> str:
   return(ret_str)
 
 #######################################################################################################################
-def debug_post_msg(logger, msg:str, screen_only:bool=False, no_screen:bool = False, end:str='\n', \
-                           flush:bool=False, raise_type=None,
-                           pre_str:str = "") -> None:
-  '''
-  Parameters :
-    logger      = pq_logger class or None
-    msg         = Message to be send
-    err         = If the message is a error or not
-    screen_only = If the message shall not be sent to logger... but to stdout instead
-    no_screen   = False
-
-  Helper function to either send messages to the correct logging destionation or....
-    write to a file without logger assistance
-
-  If raise_type is defined to something different than None, it will assume that a "raise" call must be called
-    at end of the function and the parameter itself is the raise parameter, tested raise_types:
-      TypeError
-      ValueError
-      Exception
-  '''
-  from sys import stderr as sys_stderr
-  from sys import stdout as sys_stdout
-
-  to_send = '%s%s'%(pre_str, msg)
-
-  try :
-    if logger and not screen_only :
-      cur_level = logger.getEffectiveLevel()
-      if   cur_level >= 40 :
-        logger.error(to_send)
-      elif cur_level >= 30 :
-        logger.warning(to_send)
-      elif cur_level >= 20 :
-        logger.info(to_send)
-      elif cur_level >= 10 :
-        logger.debug(to_send)
-
-    if not no_screen :
-      print(to_send, file=sys_stderr, end=end, flush=flush)
-
-    if raise_type :
-      raise raise_type(to_send)
-
-  except Exception as e:
-    raise Exception(e)
-  return(None)
-
-
-#######################################################################################################################
-def try_conv_complex(string:str, avoid_complex=True) :
-  '''
-  Type to convert a string to a number
-  If the convertion fails, return the original string
-  It will try on the following order:
-    int -> float -> complex
-
-  Parameters :
-    string        = String to be converted
-    avoid_complex = True or False, if as last attempt try to convert to a complex type number
-
-  Returns :
-    int or float or complex or string
-
-  '''
-  try :
-    return(int(string))
-  except ValueError:
-    try :
-      return(float(string))
-    except ValueError:
-      try :
-        if avoid_complex == False :
-          return(complex(string))
-        else :
-          return(string)
-      except ValueError:
-        return(string)
-
-
-#######################################################################################################################
-def line_cleanup(iterable, split=False, delimiter='', cleanup = True, remove_endln = False) :
-  '''
-  Cleanup the contents of a iterable of a string in order to facilitate processing
-  Parameters:
-    iterable  : iterable or string to be processed
-    split     : if attempt to split the cleaned string into a list
-    delimiter : delimiter to be used when tryping to split the output string
-    cleanup   : if really try to cleanup duplicated spaces and tabs
-    remove_endln : If line terminator will be removed along with the cleanup ( no cr, just lf )
-
-  Returns :
-    Iterable
-  '''
-  import unicodedata
-  ret = iterable
-
-  for ln in iterable :
-    if isinstance(ln, bytes) :
-      ln = ln.decode()
-    try :
-      if cleanup :
-        ln = ''.join(c for c in ln if not unicodedata.category(c).startswith('C'))
-        while '  ' in ln :
-          ln = ln.strip().replace('\t',' ').replace('  ', ' ')
-      if remove_endln :
-        lp = ln.split('\n')
-        ln = ''.join(lp)
-      if split :
-        yield(ln.split(delimiter))
-      else :
-        yield(ln)
-    except :
-      yield(ln)
-
-
-########################################################################################################################
-# Helper to execute shell commands
-def get_command_output(command=None, cwd=None, pq_logger = None, shell=False, timeout=30, \
-                 default_env = { 'LC_ALL' : 'C', 'PATH' : '/sbin:/etc:/bin:/usr/bin:/usr/sbin:/usr/ios/cli', 'ODMDIR' : '/etc/objrepos' }) -> dict :
-  '''
-  This helper works around subprocess module to execute shell commands within python3
-  It encapsulate the command output on a dict object, and will decode and split the command output into a list
-
-  Parameters:
-    command   = String with the command and arguments, or a list of the same
-    cwd       = working directory to be used when the command is being executed
-    pq_logger = Logging object to be used
-    shell     = If a shell will be spawn to execute the command
-    timeout   = for how long the command will be executed before assume it hanged
-
-  Returns:
-      dict with the following elements:
-        { stdout  : command output, converted to a list
-          stderr  : command stderr, converted to a list
-          retcode : return code of the command }
-  '''
-
-  import subprocess as sp
-  command_list = []
-  ret = { 'stdout' : [], 'stderr' : [], 'retcode' : -1 }
-  if command :
-    if isinstance(command, str) :
-      command_list = command.split(' ')
-      command_string = command
-    elif isinstance(command, list) :
-      command_list = command
-      command_string = ' '.join(command)
-    if len(command_list) > 0 :
-      try :
-        out = sp.run(command_list, capture_output=True, shell=shell, cwd=cwd, timeout=timeout, env=default_env)
-        ret['stdout'] = out.stdout.decode().split('\n')
-        ret['stderr'] = out.stderr.decode().split('\n')
-        ret['retcode'] = out.returncode
-      except Exception as e :
-        debug_post_msg(pq_logger, "Error when run : %s : msg : %s"%(command_string,e))
-  return(ret)
-
-
-#######################################################################################################################
 def conv_bash_var_to_dict(string, try_conv_number=False, delimiter=" ") -> dict :
   '''
   Convert bash/shell style variables into a dictionary
@@ -256,22 +88,6 @@ def conv_bash_var_to_dict(string, try_conv_number=False, delimiter=" ") -> dict 
   if try_conv_number :
     for k,v in ret.items() :
       ret[k] = try_conv_complex(v)
-  return(ret)
-
-#######################################################################################################################
-def avg_list(lst:list, ndigits:int=2) :
-  '''
-  Calculate average value of a list
-  Parameters :
-    lst -> List of numbers
-    ndigits -> Number of digits to be considered when rounding the number, -1 means no rouding
-
-  Returns:
-    number -> float
-  '''
-  ret = sum(lst)/len(lst)
-  if ndigits > 0 :
-    ret=round(ret, ndigits)
   return(ret)
 
 #######################################################################################################################

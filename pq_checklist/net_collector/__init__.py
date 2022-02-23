@@ -1,7 +1,11 @@
-from . import debug_post_msg, get_list_avg_and_diff
+from ..utils.avg_list import avg_list
+from ..utils.debug_post_msg import debug_post_msg
+from ..utils.get_list_avg_and_diff import get_list_avg_and_diff
+from ..utils.pq_round_number import pq_round_number
+
 from .entstat import parser as entstat_parser
 from .netstat import parser as netstat_parser
-from .Base_collector import Base_collector
+from ..Base_collector import Base_collector
 import datetime
 
 
@@ -67,7 +71,7 @@ class collector(Base_collector) :
     return(None)
 
 #######################################################################################################################
-  def load_from_db(self, db, days_to_fetch:int=1) -> dict :
+  def load_from_db(self, db, days_to_fetch:int=1, append_dict:dict={}) -> dict :
     '''
     Returned data for each field:
       just_changes,avg_list(just_changes), change_rate
@@ -93,82 +97,67 @@ class collector(Base_collector) :
               except :
                 values_from_db[i['interface']] = { i['stats_type'] : { i['_field'] : val_to_add } }
 
-      for dev, dev_data in values_from_db.items() :
+    for dev, dev_data in values_from_db.items() :
+      for stat_type,stats in dev_data.items() :
+        for stat_name, stat_data in stats.items() :
+          try :
+            t_val = append_dict[dev][stat_type][stat_name]
+            values_from_db[dev][stat_type][stat_name][3].append(tval)
+          except :
+            pass
+
+    for dev, dev_data in values_from_db.items() :
+      for stat_type,stats in dev_data.items() :
+        for stat_name, stat_data in stats.items() :
+          stat_data[0], stat_data[1], stat_data[2] = get_list_avg_and_diff(stat_data[3])
+
+    if len(values_from_db) == 0 :
+      for dev, dev_data in append_dict.items() :
+        values_from_db[dev] = {}
         for stat_type,stats in dev_data.items() :
+          values_from_db[dev][stat_type] = {}
           for stat_name, stat_data in stats.items() :
-            stat_data[0], stat_data[1], stat_data[2] = get_list_avg_and_diff(stat_data[3])
+            values_from_db[dev][stat_type][stat_name] = [ [], 0, 0, [ stat_data ] ]
     return(values_from_db)
 
 #######################################################################################################################
-  def health_check_data_from_db(self,db, days_to_fetch:int=45, stationary_treshold:float=0.5, \
-                                just_check_groups:bool=True, change_tolerance:float=0.1) -> list :
-    messages = []
-    for dev,dev_data in self.load_from_db(db, days_to_fetch=days_to_fetch).items() :
-      for stat_type,stats in dev_data.items() :
-        for stat_name, stat_data in stats.items() :
-          if stat_name in self.entstat_check_groups[stat_type] or not just_check_groups :
-            if len(stat_data[3]) > 1 :
-              if stat_data[3][-1] != stat_data[3][-2] :
-                base_message = 'The %s at %s session on interface %s incremented from %d to %d'%(
-                    stat_name,stat_type,dev,stat_data[3][-2],stat_data[3][-1])
-                if stat_data[2] < stationary_treshold :
-                  messages.append('%s and this is not commom'%base_message)
-                elif abs(stat_data[1]/stat_data[0][-1]) > change_tolerance :
-                  messages.append('%s which is above usual increment rate of %f'%( base_message,float(stat_data[1])))
-    return(messages)
-
-#######################################################################################################################
   def health_check(self,update_from_system:bool = True, db=None, debug:bool=False,\
-                   stationary_treshold:float=0.5, just_check_groups:bool=True, change_tolerance:float=0.1) -> list :
+                   stationary_treshold:float=0.5, days_to_fetch_back:int=45, just_check_groups:bool=True, change_tolerance:float=0.1) -> list :
     '''
     Send health messages into server's syslog for diag purposes
 
     Parameters :
       update_from_system : bool = Get latest data from the local system before give any measurement
     '''
-    # update stored stats
+    messages = []
+
+    # Load stats from memory or system
     if update_from_system :
       self.update_from_system()
 
-    messages = []
+    # Load data from memory and influxdb
     entstat = self.providers['entstat']
-    values_from_db = self.load_from_db(db)
+    values_from_db = self.load_from_db(db, days_to_fetch=days_to_fetch_back, append_dict=entstat['stats'])
 
-    # Validate counters
-    for dev in entstat['stats'].keys() :
-      for check_group, checks in self.entstat_check_groups.items() :
-        try :
-          for stat in checks :
-            try :
-              if entstat['stats'][dev]['transmit_stats'][stat] > 0 :
-                try :
-                  if values_from_db[dev][check_group][stat][3][-1] != entstat['stats'][dev]['transmit_stats'][stat][-1] :
-                    try :
-                      base_message = '%s : Adapter info : %s %s %s %d %d '%(
-                          self.entstat_group_messages[check_group][stat], stat,check_group,dev,
-                          values_from_db[dev][check_group][stat][3][-1], entstat['stats'][dev]['transmit_stats'][stat])
-                    except :
-                      base_message = 'The %s at %s session on interface %s changed from %d to %d'%(
-                        stat,check_group,dev, values_from_db[dev][check_group][stat][3][-1],
-                        entstat['stats'][dev]['transmit_stats'][stat])
+    # Do the actual checks
+    for dev,dev_data in values_from_db.items() :
+      for stat_type,stats in dev_data.items() :
+        for stat_name, stat_data in stats.items() :
+          msg_to_append = self.custom_monitor(stat_name, stat_data)
+          if not msg_to_append :
+            if stat_name in self.entstat_check_groups[stat_type] or not just_check_groups :
+              if len(stat_data[3]) > 1 :
+                if stat_data[3][-1] != stat_data[3][-2] :
+                  base_message = 'The %s at %s session on interface %s incremented from %d to %d'%(
+                      stat_name,stat_type,dev,stat_data[3][-2],stat_data[3][-1])
+                  if stat_data[2] < stationary_treshold :
+                    msg_to_append = '%s and this is not commom'%base_message
+                  elif abs(stat_data[1]/stat_data[0][-1]) > change_tolerance :
+                    msg_to_append = '%s which is above usual increment rate of %f'%( base_message,float(stat_data[1]))
+          if msg_to_append :
+            messages.append(msg_to_append)
 
-                    if values_from_db[dev][check_group][stat][2] < stationary_treshold :
-                      messages.append('%s : stationary on %f'%(base_message,values_from_db[dev][check_group][stat][2]))
-                    elif abs(values_from_db[dev][check_group][stat][1]/entstat['stats'][dev]['transmit_stats'][stat][-1]) > change_tolerance :
-                      messages.append('%s : treshold of %f'%(base_message,values_from_db[dev][check_group][stat][1]))
-                    elif debug :
-                      messages.append(base_message)
-                except :
-                  messages.append('The %s counter at %s is at %d on interface $s and no check to the database were possible'%(stat,check_group, entstat['stats'][dev]['transmit_stats'][stat],dev))
-            except Exception as e :
-              if debug :
-                debug_post_msg(self.logger, "%s : Error parsing %s : %s"%(__file__, stat,e))
-              pass
-        except Exception as e :
-          if debug :
-            debug_post_msg(self.logger, "%s : Error parsing %s : %s"%(__file__, stat,e))
-          pass
-      # LACP stats have non numerical checks
+
       if 'lacp_port_stats' in entstat['stats'][dev] :
         if not ( entstat['stats'][dev]['lacp_port_stats']['partner_state']['synchronization']  == \
                  entstat['stats'][dev]['lacp_port_stats']['actor_state']['synchronization'] == 'IN_SYNC' ) :

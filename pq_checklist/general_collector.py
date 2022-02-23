@@ -5,7 +5,7 @@ from .Base_collector import Base_collector
 from . import ansible_helper
 from time import time
 from .db_client import db_client
-from . import net_collector, cpu_collector, dio_collector, oracle_collector, vio_collector
+from . import net_collector, cpu_collector, dio_collector, oracle_collector, vio_collector, mem_collector
 
 
 #######################################################################################################################
@@ -70,6 +70,7 @@ class collector(Base_collector) :
              'cpu' : cpu_collector.collector,
              'dio' : dio_collector.collector,
              'vio' : vio_collector.collector,
+             'mem' : mem_collector.collector,
              'oracle' : oracle_collector.collector
              }
 
@@ -155,7 +156,7 @@ class collector(Base_collector) :
     '''
     tasks_output = {}
     playbook = self.config['ANSIBLE']['playbook'].strip()
-    to_collect = [ 'uname_a', 'lsdev_class', 'smtctl_c'] # bos stuff
+    to_collect = [ 'uname_a', 'lsdev_class', 'smtctl_c', 'ioo', 'no', 'vmo', 'schedo'] # bos stuff
 
     collector_types = {
         'cpu' : [
@@ -173,6 +174,10 @@ class collector(Base_collector) :
         'vio' : [
           [ 'vnicstat' ],
           [ [ 'vnicstat', 'adapters' ] ]
+          ],
+        'mem' : [
+          [ 'vmstat_sSB', 'vmstat_sv' ],
+          []
           ],
         'oracle' : [[],[]]
         }

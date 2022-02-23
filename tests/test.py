@@ -5,17 +5,93 @@ Test routines to validate that main components are working
 '''
 import pytest
 
-from pq_checklist.mpstat import parser as mpstat_parser
-from pq_checklist.lparstat import parser as lparstat_parser
-from pq_checklist.netstat import parser as netstat_parser
-from pq_checklist.bos_info import bos as bos_parser
-from pq_checklist.entstat import parser as entstat_parser
+from pq_checklist.cpu_collector.mpstat import parser as mpstat_parser
+from pq_checklist.cpu_collector.lparstat import parser as lparstat_parser
+from pq_checklist.net_collector.netstat import parser as netstat_parser
+from pq_checklist.net_collector.entstat import parser as entstat_parser
 from pq_checklist.ioscli import parser as ioscli_parser
 from pq_checklist.bos_info import bos as bos_data
-
-
+from pq_checklist.mem_collector.vmstat import parser as vmstat_parser
+from pq_checklist.utils.merge_dict import merge_dict
 
 class TestClass:
+  def test_merge_dict_append_strings(self) :
+    x = { 'a': 1, 'b' : [ 1,2,3 ], 'c' : 'aaa' }
+    y = { 'a': 1, 'b' : [ 1,2,3 ], 'c' : 'aaa' }
+    ret = {'a': [1, 1], 'b': [1, 2, 3, 1, 2, 3], 'c': 'aaaaaa'}
+    assert ret ==  merge_dict(x,y, append_strings=True)
+
+  def test_merge_dict(self) :
+    x = { 'a': 1, 'b' : [ 1,2,3 ], 'c' : 'aaa' }
+    y = { 'a': 1, 'b' : [ 1,2,3 ], 'c' : 'aaa' }
+    ret = {'a': [1, 1], 'b': [1, 2, 3, 1, 2, 3], 'c': ['aaa', 'aaa']}
+    assert ret ==  merge_dict(x,y, append_strings=False)
+
+  def test_parse_ioo(self) :
+    parser = bos_data()
+    expected_ret = {'aio_active': 0, 'aio_maxreqs': 131072, 'aio_maxservers': 30, 'aio_minservers': 3,
+                    'aio_server_inactivity': 300, 'dk_closed_path_recovery': 0, 'dk_lbp_buf_size': 512,
+                    'dk_lbp_enabled': 1, 'dk_lbp_num_bufs': 64, 'j2_atimeUpdateSymlink': 0,
+                    'j2_dynamicBufferPreallocation': 16, 'j2_inodeCacheSize': 200, 'j2_maxPageReadAhead': 128,
+                    'j2_maxRandomWrite': 0, 'j2_metadataCacheSize': 200, 'j2_minPageReadAhead': 2,
+                    'j2_nPagesPerRBNACluster': 32, 'j2_nPagesPerWriteBehindCluster': 32, 'j2_nRandomCluster': 0,
+                    'j2_recoveryMode': 1, 'j2_syncByVFS': 0, 'j2_syncConcurrency': 4, 'j2_syncDelayReport': 600,
+                    'j2_syncPageCount': 0, 'j2_syncPageLimit': 16, 'lvm_bufcnt': 9, 'maxpgahead': 8, 'maxrandwrt': 0,
+                    'numclust': 1, 'numfsbufs': 196, 'pd_npages': 4096, 'posix_aio_active': 0, 'posix_aio_maxreqs': 131072,
+                    'posix_aio_maxservers': 30, 'posix_aio_minservers': 3, 'posix_aio_server_inactivity': 300, 'spec_accessupdate': 2,
+                    'aio_affinity': 7, 'aio_fastpath': 1, 'aio_fsfastpath': 1, 'aio_kprocprio': 39, 'aio_multitidsusp': 1,
+                    'aio_sample_rate': 5, 'aio_samples_per_cycle': 6, 'iodone_distr_all_bufs': 0, 'iodone_distr_disable': 0,
+                    'iodone_distr_sib_check': 1, 'iodone_distr_trace_iodone': 0, 'j2_maxPageLocks': 64, 'j2_maxUsableMaxTransfer': 512,
+                    'j2_nBufferPerPagerDevice': 512, 'j2_nonFatalCrashesSystem': 0, 'j2_syncMappedLimit': 0,
+                    'j2_syncModifiedMapped': 1, 'j2_syncdLogSyncInterval': 1, 'j2_unmarkComp': 0, 'j2_zombieGC_enabled': 1,
+                    'jfs_clread_enabled': 0, 'jfs_use_read_lock': 1, 'memory_frames': 4194304, 'minpgahead': 2,
+                    'pcibus_dma_memory_protect': 1, 'pcibus_eeh_perm_timeout': 300, 'pcibus_max_dma_window': 512,
+                    'pgahd_scale_thresh': 0, 'posix_aio_affinity': 7, 'posix_aio_fastpath': 1, 'posix_aio_fsfastpath': 1,
+                    'posix_aio_kprocprio': 39, 'posix_aio_sample_rate': 5, 'posix_aio_samples_per_cycle': 6,
+                    'pv_min_pbuf': 512, 'sync_release_ilock': 0}
+    assert parser.load_from_file('tests/test_data/ioo_aF', parse_function=parser.parse_ioo) == expected_ret
+
+
+  def test_parse_vmstat_linux(self) :
+    parser = vmstat_parser(bos_data = bos_data())
+    ret = parser.load_from_file('tests/test_data/vmstat_sSB', parse_function=parser.parse_vmstat_s)
+    expected_ret = {'b_total_memory': 50295533568.0, 'b_used_memory': 8225038336.0, 'b_active_memory': 10827042816.0,
+                    'b_inactive_memory': 35691974656.0, 'b_free_memory': 1932533760.0, 'b_buffer_memory': 1778040832.0,
+                    'b_swap_cache': 38359920640.0, 'b_total_swap': 1023406080.0, 'b_used_swap': 964182016.0,
+                    'b_free_swap': 59224064.0, 'non-nice_user_cpu_ticks': 194932976.0, 'nice_user_cpu_ticks': 423850.0,
+                    'system_cpu_ticks': 54865747.0, 'idle_cpu_ticks': 557921475.0, 'io-wait_cpu_ticks': 541766.0,
+                    'irq_cpu_ticks': 0.0, 'softirq_cpu_ticks': 21830334.0, 'stolen_cpu_ticks': 0.0,
+                    'pages_paged_in': 15426866472.0, 'pages_paged_out': 738683673.0, 'pages_swapped_in': 390236.0,
+                    'pages_swapped_out': 1124052.0, 'interrupts': 1582425031.0, 'cpu_context_switches': 4187179471.0,
+                    'boot_time': 1640489302.0, 'forks': 12822370.0}
+    assert ret == expected_ret
+
+  def test_parse_vmstat_aix(self) :
+    parser = vmstat_parser(bos_data = bos_data())
+    ret = parser.load_from_file('tests/test_data/vmstat_sv', parse_function=parser.parse_vmstat_s)
+    expected_ret = { 'total_address_trans_faults': 3352336647.0, 'page_ins': 139878.0, 'page_outs': 17594103.0,
+                     'paging_space_page_ins': 0.0, 'paging_space_page_outs': 0.0, 'total_reclaims': 0.0,
+                     'zero_filled_pages_faults': 1131950778.0, 'executable_filled_pages_faults': 7046.0,
+                     'pages_examined_by_clock': 0.0, 'revolutions_of_the_clock_hand': 0.0,
+                     'pages_freed_by_the_clock': 0.0, 'backtracks': 33281569.0, 'free_frame_waits': 0.0,
+                     'extend_xpt_waits': 0.0, 'pending_io_waits': 30009.0, 'start_ios': 17733981.0,
+                     'iodones': 4210944.0, 'cpu_context_switches': 10142679014.0, 'device_interrupts': 2319873329.0,
+                     'software_interrupts': 3118662390.0, 'decrementer_interrupts': 3320348089.0,
+                     'mpc-sent_interrupts': 1103.0, 'mpc-receive_interrupts': 1111.0, 'phantom_interrupts': 624.0,
+                     'traps': 0.0, 'syscalls': 6656428359.0, 'memory_pages': 4194304.0, 'lruable_pages': 3984032.0,
+                     'free_pages': 2510739.0, 'memory_pools': 1.0, 'pinned_pages': 1502261.0,
+                     'maxpin_percentage': 900.0, 'minperm_percentage': 30.0, 'maxperm_percentage': 900.0,
+                     'numperm_percentage': 31.0, 'file_pages': 125079.0, 'compressed_percentage': 0.0,
+                     'compressed_pages': 0.0, 'numclient_percentage': 31.0, 'maxclient_percentage': 900.0,
+                     'client_pages': 125079.0, 'remote_pageouts_scheduled': 0.0,
+                     'pending_disk_ios_blocked_with_no_pbuf': 0.0, 'paging_space_ios_blocked_with_no_psbuf': 0.0,
+                     'filesystem_ios_blocked_with_no_fsbuf': 1972.0, 'client_filesystem_ios_blocked_with_no_fsbuf': 385.0,
+                     'external_pager_filesystem_ios_blocked_with_no_fsbuf': 0.0,
+                     'percentage_of_memory_used_for_computational_pages': 372.0}
+
+    assert ret == expected_ret
+
+
   def test_parse_seastat_d(self):
     parser = ioscli_parser()
     expected_ret = {'ent63': {'vlan': {706: {'tx': {'pkg': 163435, 'bytes': 116046901},
@@ -118,7 +194,7 @@ class TestClass:
 
 
   def test_bos_info_lsdev_class(self):
-    parser = bos_parser()
+    parser = bos_data()
     expected_ret = {
       'L2cache0': {'class': 'memory', 'subclass': 'sys', 'type': 'L2cache_rspc'}, 'advmctl': {'class': 'driver', 'subclass': 'advm', 'type': 'advmctl'},
       'cluster0': {'class': 'pseudo', 'subclass': 'node', 'type': 'cluster'}, 'en4': {'class': 'if', 'subclass': 'EN', 'type': 'en'},

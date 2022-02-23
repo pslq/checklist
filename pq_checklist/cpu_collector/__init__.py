@@ -1,7 +1,9 @@
-from . import debug_post_msg, get_command_output, avg_list
+from ..utils.avg_list import avg_list
+from ..utils.debug_post_msg import debug_post_msg
+from ..Base_collector import Base_collector
+
 from .lparstat import parser as lparstat_parser
 from .mpstat import parser as mpstat_parser
-from .Base_collector import Base_collector
 
 from datetime import datetime
 

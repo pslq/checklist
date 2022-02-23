@@ -2,7 +2,12 @@
 
 # All imports used
 from __future__ import absolute_import, division, print_function
-from .. import get_command_output, debug_post_msg, try_conv_complex, line_cleanup, avg_list
+from ..utils.get_command_output import get_command_output
+from ..utils.debug_post_msg import debug_post_msg
+from ..utils.try_conv_complex import try_conv_complex
+from ..utils.line_cleanup import line_cleanup
+from ..utils.avg_list import avg_list
+
 from collections import defaultdict
 from ._parse_net_v_stat_stats import parse_net_v_stat_stats
 from ._parse_entstat_stats import parse_entstat_stats

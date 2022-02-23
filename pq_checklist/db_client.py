@@ -75,13 +75,14 @@ class db_client() :
       from influxdb_client import InfluxDBClient, Point, WritePrecision
       influx_config = { 'url' : os.getenv('INFLUX_URL'), 'token' : os.getenv('INFLUX_TOKEN'),
                         'org' : os.getenv('INFLUX_ORG'), 'bucket': os.getenv('INFLUX_BUCKET'), 'timeout' : 5000 }
-      influx_config = dict(self.config.items('INFLUXDB')) if 0 in [ len(v) for v in influx_config.values() ]
-      if 0 in [ len(v) for v in influx_config.values() ] :
-        try :
-          self.db = InfluxDBClient(**dict(self.config.items('INFLUXDB')))
-        except Exception as e :
-          self.db = None
-          debug_post_msg(self.logger,'Error connecting to influxDB: %s'%e)
+      if None in [ v for v in influx_config.values() ] :
+        influx_config = dict(self.config.items('INFLUXDB'))
+
+      try :
+        self.db = InfluxDBClient(**influx_config)
+      except Exception as e :
+        self.db = None
+        debug_post_msg(self.logger,'Error connecting to influxDB: %s'%e)
     except Exception as e :
       debug_post_msg(self.logger,
                        'InfluxDB not configured or influxdb_client not installed, or loglevel set to debug. Queries will be saved at dumpfile')

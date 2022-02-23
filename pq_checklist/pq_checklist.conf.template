@@ -62,6 +62,11 @@ involuntarycontextswitch_ratio     = 30
 # Ratio to issue a warning of ilcs against vlcs ( only when running on shared core mode )
 involuntarycorecontextswitch_ratio = 10
 
+[CUSTOM_COUNTER]
+# Under this session custom behaviors can be added to the health check routines.
+#  Therefore counters that were not previously mapped for action, could be added here
+net_collector = { 'crc_errors' : { 'type' : 'number', 'value' : 0, 'criteria' : '>', 'message' : 'CRC Error Incremented for adapter' } }
+
 [ORACLE]
 # If handling local instances
 conn_type = local
@@ -90,3 +95,4 @@ dump_running_ids = True
 table_reclaimable_treshold = 50
 stats_max_parallel = 10
 stats_estimate_percent = 60
+

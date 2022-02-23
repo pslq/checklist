@@ -1,7 +1,8 @@
 import os
 from ast import literal_eval
-from .bos_info import bos as bos_parser
-from . import debug_post_msg
+from ..bos_info import bos as bos_parser
+from .. import debug_post_msg
+from ._custom_monitor import custom_monitor
 
 
 #######################################################################################################################
@@ -30,6 +31,14 @@ class Base_collector :
     # General parameters to send to load collectors or providers
     self.general_parameters     = dict(logger = self.logger, cwd=self.cwd, bos_data=self.bos_data, samples = self.config['CPU']['samples'], interval = self.config['CPU']['interval'])
 
+    self.__custom_monitor__ = None
+    if 'CUSTOM_COUNTER' in self.config :
+      if __name__ in self.config['CUSTOM_COUNTER'] :
+        try :
+          self.__custom_monitor__ = eval(self.config['CUSTOM_COUNTER'][__name__])
+        except Exception as e :
+          debug_post_msg(self.logger,'Error loading custom monitor values for %s : %s'%(__name__,e), raise_type=Exception)
+          self.__custom_monitor__ = None
 
     # Collectors to be loaded which general collector
     self.checks_to_perform = literal_eval(self.config['MODE']['collectors'])
@@ -89,6 +98,10 @@ class Base_collector :
     return(None)
 
 #######################################################################################################################
+  def custom_monitor(self, element, value) :
+    return(custom_monitor(self.__custom_monitor__, element, value) if self.__custom_monitor__ else None)
+
+#######################################################################################################################
   def update_from_system(self) -> None:
     '''
     Load data from local system to update the providers
@@ -100,7 +113,6 @@ class Base_collector :
         debug_post_msg(self.logger,'Error updating %s : %s'%(str(provider),e), raise_type=Exception)
 
     return(None)
-
 
 #######################################################################################################################
   def get_latest_measurements(self, debug:bool=False, update_from_system:bool=False) :

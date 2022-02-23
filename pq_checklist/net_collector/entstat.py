@@ -1,13 +1,9 @@
-#!/opt/freeware/bin/python3
-
 # All imports used
-from . import debug_post_msg, try_conv_complex, avg_list
+from ..utils.avg_list import avg_list
+from ..utils.debug_post_msg import debug_post_msg
+from ..utils.try_conv_complex import try_conv_complex
+from ..Stats_Parser import StatsParser
 import csv, datetime
-
-
-
-# All imports used
-from .Stats_Parser import StatsParser
 
 class parser(StatsParser) :
   def __init__(self, logger = None, cwd = '/tmp', bos_data = None, samples = 2, interval = 1):
